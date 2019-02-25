@@ -9,6 +9,15 @@ int main(int argc, char *argv[])
 {
 	char cfg_file[] = "client.cfg";
 
+	FILE *fpointer;
+	char singleLine[100];
+       	char cfg_param[20];	
+	int l;
+
+	char nom_equip[7];
+	char MAC_equip[13];
+	char server_nom[20]; //TODO: Pot ser més gran?
+	int server_port;
 
 
 
@@ -30,6 +39,27 @@ int main(int argc, char *argv[])
 		}
 	}
 	
+	// Obtain information from the configuration file
+	fpointer = fopen(cfg_file,"r");
+	char *token;
+	while(fgets(singleLine,100,fpointer) != NULL)
+	{
+		
+		printf("Single line: %s\n", singleLine);
+		token = strtok(singleLine," ");
+		printf("Parameter name: %s\n", token);
+		token = strtok(NULL," ");
+		printf("Parameter value: %s\n", token);
+	}
+
+
+	fclose(fpointer);
+	
+
+
+
+
+
 	return 0;
 }
 
