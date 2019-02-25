@@ -11,13 +11,12 @@ int main(int argc, char *argv[])
 
 	FILE *fpointer;
 	char singleLine[100];
-       	char cfg_param[20];	
-	int l;
+       	char *cfg_param;	
 
 	char nom_equip[7];
 	char MAC_equip[13];
-	char server_nom[20]; //TODO: Pot ser més gran?
-	int server_port;
+	char nom_server[20]; //TODO: Pot ser més gran?
+	int port_server;
 
 
 
@@ -41,18 +40,43 @@ int main(int argc, char *argv[])
 	
 	// Obtain information from the configuration file
 	fpointer = fopen(cfg_file,"r");
-	char *token;
 	while(fgets(singleLine,100,fpointer) != NULL)
 	{
-		
-		printf("Single line: %s\n", singleLine);
-		token = strtok(singleLine," ");
-		printf("Parameter name: %s\n", token);
-		token = strtok(NULL," ");
-		printf("Parameter value: %s\n", token);
+		cfg_param = strtok(singleLine," ");		
+		if(strcmp(cfg_param,"nom") == 0)
+		{
+			cfg_param = strtok(NULL," ");
+			strcpy(nom_equip, cfg_param);
+			//printf("DEBUG.cfg_param: %s\n", cfg_param);
+			//printf("DEBUG.nom_equip: %s\n", nom_equip);
+		}
+		else if(strcmp(cfg_param,"MAC") == 0)
+		{
+			cfg_param = strtok(NULL," ");
+                        strcpy(MAC_equip,cfg_param);
+		}
+		else if(strcmp(cfg_param,"Server") == 0)
+		{
+			cfg_param = strtok(NULL," ");
+                        strcpy(nom_server,cfg_param);
+		}
+		else if(strcmp(cfg_param,"Server_port") == 0)
+		{
+			cfg_param = strtok(NULL," ");
+                        port_server = atoi(cfg_param);
+		}	
+		else
+		{
+			printf("Error in the content of %s\n",cfg_file );
+			printf("Terminating process\n");
+			exit(-1);
+		}
 	}
-
-
+        printf("Nom equip: %s\n",nom_equip);
+	printf("MAC equip: %s\n",MAC_equip);
+        printf("Nom servidor: %s\n",nom_server);
+        printf("Port servidor: %d\n",port_server);
+	
 	fclose(fpointer);
 	
 
