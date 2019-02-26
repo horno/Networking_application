@@ -15,8 +15,8 @@ struct cfg_data{
 
 /* Function declarations */
 struct cfg_data collect_config_data(char cfg_file[]);
-
 char* change_cfg_filename(int argc, char *argv[]);
+
 
 /* Main function */
 int main(int argc, char *argv[])
