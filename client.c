@@ -16,11 +16,12 @@ struct cfg_data{
 /* Function declarations */
 struct cfg_data collect_config_data(char cfg_file[]);
 
+char* change_cfg_filename(int argc, char *argv[]);
 
 /* Main function */
 int main(int argc, char *argv[])
 {
-	char cfg_file[] = "client.cfg";
+	char *cfg_file = "client.cfg";
 
 	struct cfg_data dataconfig;
 
@@ -29,16 +30,7 @@ int main(int argc, char *argv[])
 	{
 		if(strcmp(argv[1],"-c") == 0)
 		{
-			if(argc != 3)
-			{	
-				printf("Use:\n");
-				printf("\t%s -c <nom_arxiu>\n",argv[0]);
-				exit(-1);
-			}
-			else
-			{
-				sprintf(cfg_file, argv[2]);
-			}
+			cfg_file = change_cfg_filename(argc, argv);
 		}
 	}
 	
@@ -47,10 +39,22 @@ int main(int argc, char *argv[])
 	printf("%s\n",dataconfig.MAC_equip);
 	printf("%s\n",dataconfig.nom_server);
 	printf("%d\n",dataconfig.port_server);
-
+	
 	return 0;
 }
-
+char* change_cfg_filename(int argc, char *argv[])
+{
+	if(argc != 3)
+	{
+		printf("Use:\n");
+	       	printf("\t%s -c <nom_arxiu>\n",argv[0]);
+		exit(-1);
+	}
+	else
+	{
+		 return argv[2];
+	}
+}
 
 struct cfg_data collect_config_data(char cfg_file[])
 {
