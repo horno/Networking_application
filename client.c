@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
 
 	FILE *fpointer;
 	char singleLine[100];
-       	char *cfg_param;	
+       	char *cfg_param; //TODO: millorar	
 
 	char nom_equip[7];
 	char MAC_equip[13];
@@ -45,24 +45,22 @@ int main(int argc, char *argv[])
 		cfg_param = strtok(singleLine," ");		
 		if(strcmp(cfg_param,"nom") == 0)
 		{
-			cfg_param = strtok(NULL," ");
+			cfg_param = strtok(NULL,"\n");
 			strcpy(nom_equip, cfg_param);
-			//printf("DEBUG.cfg_param: %s\n", cfg_param);
-			//printf("DEBUG.nom_equip: %s\n", nom_equip);
 		}
 		else if(strcmp(cfg_param,"MAC") == 0)
 		{
-			cfg_param = strtok(NULL," ");
+			cfg_param = strtok(NULL,"\n");
                         strcpy(MAC_equip,cfg_param);
 		}
 		else if(strcmp(cfg_param,"Server") == 0)
 		{
-			cfg_param = strtok(NULL," ");
+			cfg_param = strtok(NULL,"\n");
                         strcpy(nom_server,cfg_param);
 		}
-		else if(strcmp(cfg_param,"Server_port") == 0)
+		else if(strcmp(cfg_param,"Server-port") == 0)
 		{
-			cfg_param = strtok(NULL," ");
+			cfg_param = strtok(NULL,"\n");
                         port_server = atoi(cfg_param);
 		}	
 		else
