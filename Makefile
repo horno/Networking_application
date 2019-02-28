@@ -2,7 +2,7 @@
 
 #
 #
-LDFLAGS= -Wall -ansi -pedantic       # -lnsl -lsocket
+LDFLAGS= -Wall -ansi -pedantic       
 
 all: client
 
