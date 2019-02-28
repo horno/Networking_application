@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 	int a;
 
 	/* TEMPORAL - DEBUG*/
-	char dades[6] = "HEY YA";
+	char dades[100] = "HEY YA";
 	/* TEMPORAL - DEBUG */
 
 	/* argument functionalities */
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 	
 	/* Opens UDP socket */
 
-	if((sock = socket(AF_INET,SOCK_DGRAM,0))<9)
+	if((sock = socket(AF_INET,SOCK_DGRAM,0))<0)
 	{
 		perror("Error al obrir el socket:");
 		exit(-1);
@@ -79,6 +79,7 @@ int main(int argc, char *argv[])
 	               sizeof(struct sockaddr_in))<0)
 	{
 		perror("Error amb el binding del socket:");
+		exit(-1);
 	}
 
 	/* Gets the IP of the host by its name */
@@ -97,9 +98,21 @@ int main(int argc, char *argv[])
 	if(a < 0)
 	{
 		perror("Error al enviar el paquet");
+		exit(-1);
 	}
 
+	/* TEMPORAL - DEBUG - PROVA RESPOSTA SERVIDOR */
+	a = recvfrom(sock,dades,100,0,(struct sockaddr*)0,
+			(int *)0);
+	if(a < 0)
+	{
+		perror("DEBUGGER: error al rebre paquet del servidor");
+		exit(-2);
+	}
+	dades[a]='\0';
+	printf("%s\n",dades);
 
+	/* TEMPORAL - DEBUG - PROVA RESPOSTA SERVIDOR */
 
 
 	
