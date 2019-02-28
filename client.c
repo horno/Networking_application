@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 	
 	/* Opens UDP socket */
 
-	if((sock = socket(AF_INET,SOCK_DGRAM,0))<0)
+	if((sock = socket(AF_INET,SOCK_DGRAM,0))<9)
 	{
 		perror("Error al obrir el socket:");
 		exit(-1);
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	/* TEMPORAL - DEBUG - PROVA RESPOSTA SERVIDOR */
+	/* TEMPORAL - DEBUG - PROVA RESPOSTA SERVIDOR 
 	a = recvfrom(sock,dades,100,0,(struct sockaddr*)0,
 			(int *)0);
 	if(a < 0)
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
 	dades[a]='\0';
 	printf("%s\n",dades);
 
-	/* TEMPORAL - DEBUG - PROVA RESPOSTA SERVIDOR */
+	   TEMPORAL - DEBUG - PROVA RESPOSTA SERVIDOR */
 
 
 	
