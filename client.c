@@ -39,6 +39,8 @@ int main(int argc, char *argv[])
 	struct sockaddr_in	addr_cli,addr_server;
 	struct hostent *ent;
 
+	struct register_package register_pack;
+
 	int sock;
 
 	int a;
@@ -61,8 +63,7 @@ int main(int argc, char *argv[])
 	dataconfig = collect_config_data(cfg_file);
 	
 	/* Opens UDP socket */
-
-	if((sock = socket(AF_INET,SOCK_DGRAM,0))<9)
+	if((sock = socket(AF_INET,SOCK_DGRAM,0))<0)
 	{
 		perror("Error al obrir el socket:");
 		exit(-1);
@@ -73,7 +74,6 @@ int main(int argc, char *argv[])
 	addr_cli.sin_family = AF_INET;
 	addr_cli.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr_cli.sin_port = htons(0);
-
 	/* Binding */
 	if(bind(sock, (struct sockaddr *)&addr_cli,
 	               sizeof(struct sockaddr_in))<0)
@@ -92,8 +92,17 @@ int main(int argc, char *argv[])
 					->s_addr);
 	addr_server.sin_port = htons(dataconfig.port_server);
 	
+	/* Fills register package */
+	memset(&register_pack,0,sizeof(register_pack));
+	register_pack.tipus_paquet = '0';
+	strcpy(register_pack.nom_equip,dataconfig.nom_equip);
+	strcpy(register_pack.MAC_addr,dataconfig.MAC_equip);
+	strcpy(register_pack.num_aleatori,"");
+	strcpy(register_pack.dades,"");
+	
+
 	/* Sends package to the server */
-	a = sendto(sock,dades,strlen(dades)+1,0, //TO DO: +1?
+	a = sendto(sock,&register_pack,sizeof(register_pack)+1,0, 
 	       	(struct sockaddr*) &addr_server, sizeof(addr_server));
 	if(a < 0)
 	{
@@ -101,9 +110,10 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	/* TEMPORAL - DEBUG - PROVA RESPOSTA SERVIDOR 
+	/*  TEMPORAL - DEBUG - PROVA RESPOSTA SERVIDOR */
 	a = recvfrom(sock,dades,100,0,(struct sockaddr*)0,
 			(int *)0);
+
 	if(a < 0)
 	{
 		perror("DEBUGGER: error al rebre paquet del servidor");
@@ -111,8 +121,7 @@ int main(int argc, char *argv[])
 	}
 	dades[a]='\0';
 	printf("%s\n",dades);
-
-	   TEMPORAL - DEBUG - PROVA RESPOSTA SERVIDOR */
+	/*   TEMPORAL - DEBUG - PROVA RESPOSTA SERVIDOR */
 
 
 	
