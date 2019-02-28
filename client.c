@@ -4,16 +4,18 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <netdb.h> //TO DO: es pot utilitzar?
+#include <netdb.h> /* TO DO: es pot utilitzar? */
 
 #include <string.h>
 
 
+#define h_addr h_addr_list[0] /* Backward compatibility */
+ 
 /* Structures */
-struct cfg_data{ //TO DO: rename?
+struct cfg_data{ /*TO DO: rename? */
 	char nom_equip[7];
 	char MAC_equip[13];
-	char nom_server[20];//TODO Pot ser més gran?
+	char nom_server[20];/*TODO Pot ser més gran? */
 	int port_server;
 };
 struct register_package{
@@ -28,7 +30,7 @@ struct register_package{
 /* Function declarations */
 struct cfg_data collect_config_data(char cfg_file[]);
 char* change_cfg_filename(int argc, char *argv[]);
-
+int socket_work();
 
 /* Main function */
 int main(int argc, char *argv[])
@@ -45,8 +47,10 @@ int main(int argc, char *argv[])
 
 	int a;
 
+	/* int debug = 0; */
+
 	/* TEMPORAL - DEBUG*/
-	char dades[100] = "HEY YA";
+	/* char dades[100] = "HEY YA"; */
 	/* TEMPORAL - DEBUG */
 
 	/* argument functionalities */
@@ -62,6 +66,7 @@ int main(int argc, char *argv[])
 
 	dataconfig = collect_config_data(cfg_file);
 	
+	/* strcpy(register_pack.nom_equip,dataconfig.nom_equip); */
 	/* Opens UDP socket */
 	if((sock = socket(AF_INET,SOCK_DGRAM,0))<0)
 	{
@@ -70,7 +75,7 @@ int main(int argc, char *argv[])
 	}
 		
 	/* Fills the client address struct for the binding */
-	//TO DO: mirar si fer memset
+	/* TO DO: mirar si fer memset */
 	addr_cli.sin_family = AF_INET;
 	addr_cli.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr_cli.sin_port = htons(0);
@@ -86,7 +91,7 @@ int main(int argc, char *argv[])
 	ent = gethostbyname(dataconfig.nom_server);
 
 	/* Fills the server address struct where we send the data */
-	//TO DO: mirar si fer memset
+	/* TO DO: mirar si fer memset */
 	addr_server.sin_family = AF_INET;
 	addr_server.sin_addr.s_addr = (((struct in_addr *)ent->h_addr)
 					->s_addr);
@@ -100,8 +105,8 @@ int main(int argc, char *argv[])
 	strcpy(register_pack.num_aleatori,"");
 	strcpy(register_pack.dades,"");
 	
-
-	/* Sends package to the server */
+	
+	/* Sends package to the server */  
 	a = sendto(sock,&register_pack,sizeof(register_pack)+1,0, 
 	       	(struct sockaddr*) &addr_server, sizeof(addr_server));
 	if(a < 0)
@@ -111,7 +116,7 @@ int main(int argc, char *argv[])
 	}
 
 	/*  TEMPORAL - DEBUG - PROVA RESPOSTA SERVIDOR */
-	a = recvfrom(sock,dades,100,0,(struct sockaddr*)0,
+	/*a = recvfrom(sock,dades,100,0,(struct sockaddr*)0,
 			(int *)0);
 
 	if(a < 0)
@@ -120,7 +125,7 @@ int main(int argc, char *argv[])
 		exit(-2);
 	}
 	dades[a]='\0';
-	printf("%s\n",dades);
+	printf("%s\n",dades);*/
 	/*   TEMPORAL - DEBUG - PROVA RESPOSTA SERVIDOR */
 
 
@@ -128,6 +133,16 @@ int main(int argc, char *argv[])
 	close(sock);
 	return 0;
 }
+
+/*int socket_work()
+{
+
+
+
+
+
+}*/
+
 char* change_cfg_filename(int argc, char *argv[])
 {
 	if(argc != 3)
@@ -144,10 +159,10 @@ char* change_cfg_filename(int argc, char *argv[])
 
 struct cfg_data collect_config_data(char cfg_file[])
 {
-	// Obtain information from the configuration file
+	/* Obtain information from the configuration file */
 	FILE *fpointer;
         char singleLine[100];
-        char *cfg_param; //TODO: millorar  
+        char *cfg_param; /* TO DO: millorar */ 
 
 	struct cfg_data dataconfig;
 
