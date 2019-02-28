@@ -94,7 +94,10 @@ int main(int argc, char *argv[])
 	/* Sends package to the server */
 	a = sendto(sock,dades,strlen(dades)+1,0, //TO DO: +1?
 	       	(struct sockaddr*) &addr_server, sizeof(addr_server));
-
+	if(a < 0)
+	{
+		perror("Error al enviar el paquet");
+	}
 
 
 
