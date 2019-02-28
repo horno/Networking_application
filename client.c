@@ -1,15 +1,27 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netdb.h> //TO DO: es pot utilitzar?
 
 #include <string.h>
 
 
 /* Structures */
-struct cfg_data{
+struct cfg_data{ //TO DO: rename?
 	char nom_equip[7];
 	char MAC_equip[13];
 	char nom_server[20];//TODO Pot ser més gran?
 	int port_server;
+};
+struct register_package{
+	unsigned char tipus_paquet;
+	char nom_equip[7];
+	char MAC_addr[13];
+	char num_aleatori[7];
+	char dades[50];
 };
 
 
@@ -24,6 +36,16 @@ int main(int argc, char *argv[])
 	char *cfg_file = "client.cfg";
 
 	struct cfg_data dataconfig;
+	struct sockaddr_in	addr_cli,addr_server;
+	struct hostent *ent;
+
+	int sock;
+
+	int a;
+
+	/* TEMPORAL - DEBUG*/
+	char dades[6] = "HEY YA";
+	/* TEMPORAL - DEBUG */
 
 	/* argument functionalities */
 	if(argc > 1)
@@ -34,12 +56,51 @@ int main(int argc, char *argv[])
 		}
 	}
 	
+	/* Calls function that collects configuration data */
+
 	dataconfig = collect_config_data(cfg_file);
-	printf("%s\n",dataconfig.nom_equip);
-	printf("%s\n",dataconfig.MAC_equip);
-	printf("%s\n",dataconfig.nom_server);
-	printf("%d\n",dataconfig.port_server);
 	
+	/* Opens UDP socket */
+
+	if((sock = socket(AF_INET,SOCK_DGRAM,0))<9)
+	{
+		perror("Error al obrir el socket:");
+		exit(-1);
+	}
+		
+	/* Fills the client address struct for the binding */
+	//TO DO: mirar si fer memset
+	addr_cli.sin_family = AF_INET;
+	addr_cli.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr_cli.sin_port = htons(0);
+
+	/* Binding */
+	if(bind(sock, (struct sockaddr *)&addr_cli,
+	               sizeof(struct sockaddr_in))<0)
+	{
+		perror("Error amb el binding del socket:");
+	}
+
+	/* Gets the IP of the host by its name */
+	ent = gethostbyname(dataconfig.nom_server);
+
+	/* Fills the server address struct where we send the data */
+	//TO DO: mirar si fer memset
+	addr_server.sin_family = AF_INET;
+	addr_server.sin_addr.s_addr = (((struct in_addr *)ent->h_addr)
+					->s_addr);
+	addr_server.sin_port = htons(dataconfig.port_server);
+	
+	/* Sends package to the server */
+	a = sendto(sock,dades,strlen(dades)+1,0, //TO DO: +1?
+	       	(struct sockaddr*) &addr_server, sizeof(addr_server));
+
+
+
+
+
+	
+	close(sock);
 	return 0;
 }
 char* change_cfg_filename(int argc, char *argv[])
