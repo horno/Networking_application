@@ -30,7 +30,8 @@ struct register_package{
 /* Function declarations */
 struct cfg_data collect_config_data(char cfg_file[]);
 char* change_cfg_filename(int argc, char *argv[]);
-void fill_structures(int sock, struct sockaddr_in *addr_cli);
+void fill_structures(int sock, struct sockaddr_in *addr_cli,
+					struct hostent *ent);
 
 /* Main function */
 int main(int argc, char *argv[])
@@ -38,14 +39,14 @@ int main(int argc, char *argv[])
 	char *cfg_file = "client.cfg";
 
 	struct cfg_data dataconfig;
-	struct sockaddr_in	addr_cli,addr_server;
+	struct sockaddr_in	addr_cli/*,addr_server*/;
 	struct hostent *ent = malloc(sizeof(*ent));
 
-	struct register_package register_pack;
+	/*struct register_package register_pack;*/
 
 	int sock;
 
-	int a;
+	/*int a;*/
 
 	/* int debug = 0; */
 
@@ -74,7 +75,7 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	fill_structures(sock, &addr_cli);
+	fill_structures(sock, &addr_cli, ent);
 
 
 
@@ -91,37 +92,36 @@ int main(int argc, char *argv[])
 	{
 		perror("Error amb el binding del socket:");
 		exit(-1);
-	}*/
+	}
 
-	/* Gets the IP of the host by its name */
-	ent = gethostbyname(dataconfig.nom_server);
+	ent = gethostbyname(dataconfig.nom_server);*/
 
 	/* Fills the server address struct where we send the data */
 	/* TO DO: mirar si fer memset */
-	addr_server.sin_family = AF_INET;
+	/*addr_server.sin_family = AF_INET;
 	addr_server.sin_addr.s_addr = (((struct in_addr *)ent->h_addr)
 					->s_addr);
-	addr_server.sin_port = htons(dataconfig.port_server);
+	addr_server.sin_port = htons(dataconfig.port_server);*/
 	
 	/* Fills register package */
-	memset(&register_pack,0,sizeof(register_pack));
+	/*memset(&register_pack,0,sizeof(register_pack));
 	register_pack.tipus_paquet = 0x00;
 	strcpy(register_pack.nom_equip,dataconfig.nom_equip);
 	strcpy(register_pack.MAC_addr,dataconfig.MAC_equip);
 	strcpy(register_pack.num_aleatori,"");
-	strcpy(register_pack.dades,"");
+	strcpy(register_pack.dades,"");*/
 	
 
 	/* --------------------------------------------- */
 
-	/* Sends package to the server */  
+	/* Sends package to the server   
 	a = sendto(sock,&register_pack,sizeof(register_pack)+1,0, 
 	       	(struct sockaddr*) &addr_server, sizeof(addr_server));
 	if(a < 0)
 	{
 		perror("Error al enviar el paquet");
 		exit(-1);
-	}
+	}*/
 
 	/*  TEMPORAL - DEBUG - PROVA RESPOSTA SERVIDOR */
 	/*a = recvfrom(sock,dades,100,0,(struct sockaddr*)0,
@@ -142,8 +142,10 @@ int main(int argc, char *argv[])
 	return 0;
 }
 /* Fills the client address struct for the binding, binds, Gets the IP of the host by its name */
+/* TODO: mirar si es pot fer al principi, quan s'inicialitzen les structs */
 /* TODO: mirar si fer memset */
-void fill_structures(int sock, struct sockaddr_in *addr_cli)
+void fill_structures(int sock, struct sockaddr_in *addr_cli,
+					struct hostent *ent)
 {
 	
         addr_cli->sin_family = AF_INET;
@@ -157,9 +159,9 @@ void fill_structures(int sock, struct sockaddr_in *addr_cli)
         }
 
         /*ent = gethostbyname(dataconfig.nom_server);
+		*/
 
-
-        addr_server->sin_family = AF_INET;
+        /*addr_server->sin_family = AF_INET;
         addr_server->sin_addr.s_addr = (((struct in_addr *)ent->h_addr)
                                         ->s_addr);
         addr_server->sin_port = htons(dataconfig.port_server);
