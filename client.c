@@ -30,10 +30,7 @@ struct register_package{
 /* Function declarations */
 struct cfg_data collect_config_data(char cfg_file[]);
 char* change_cfg_filename(int argc, char *argv[]);
-void fill_structures(int sock, struct sockaddr_in *addr_cli,
-               struct cfg_data dataconfig, struct hostent *ent,
-               struct sockaddr_in *addr_server,
-               struct register_package *register_pack);
+void fill_structures(int sock, struct sockaddr_in *addr_cli);
 
 /* Main function */
 int main(int argc, char *argv[])
@@ -77,35 +74,36 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	fill_structures(sock, &addr_cli, dataconfig, ent, &addr_server,
-			&register_pack);
-/* ----------------------------------------------------- */
-/*
+	fill_structures(sock, &addr_cli);
 
-	/x* Fills the client address struct for the binding *x/
-	/x* TO DO: mirar si fer memset *x/
+
+
+	/* Fills the client address struct for the binding */
+	/* TO DO: mirar si fer memset */
+	/* --------------------------------------------------  */
+	/*
 	addr_cli.sin_family = AF_INET;
 	addr_cli.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr_cli.sin_port = htons(0);
-	/x* Binding *x/
+	
 	if(bind(sock, (struct sockaddr *)&addr_cli,
 	               sizeof(struct sockaddr_in))<0)
 	{
 		perror("Error amb el binding del socket:");
 		exit(-1);
-	}
+	}*/
 
-	/x* Gets the IP of the host by its name *x/
+	/* Gets the IP of the host by its name */
 	ent = gethostbyname(dataconfig.nom_server);
 
-	/x* Fills the server address struct where we send the data *x/
-	/x* TO DO: mirar si fer memset *x/
+	/* Fills the server address struct where we send the data */
+	/* TO DO: mirar si fer memset */
 	addr_server.sin_family = AF_INET;
 	addr_server.sin_addr.s_addr = (((struct in_addr *)ent->h_addr)
 					->s_addr);
 	addr_server.sin_port = htons(dataconfig.port_server);
 	
-	/x* Fills register package *x/
+	/* Fills register package */
 	memset(&register_pack,0,sizeof(register_pack));
 	register_pack.tipus_paquet = 0x00;
 	strcpy(register_pack.nom_equip,dataconfig.nom_equip);
@@ -113,9 +111,8 @@ int main(int argc, char *argv[])
 	strcpy(register_pack.num_aleatori,"");
 	strcpy(register_pack.dades,"");
 	
-*/
-/* ------------------------------------------  */
 
+	/* --------------------------------------------- */
 
 	/* Sends package to the server */  
 	a = sendto(sock,&register_pack,sizeof(register_pack)+1,0, 
@@ -144,43 +141,35 @@ int main(int argc, char *argv[])
 	close(sock);
 	return 0;
 }
-
-void fill_structures(int sock, struct sockaddr_in *addr_cli,
-	       struct cfg_data dataconfig, struct hostent *ent,
-       	       struct sockaddr_in *addr_server,
-	       struct register_package *register_pack)
+/* Fills the client address struct for the binding, binds, Gets the IP of the host by its name */
+/* TODO: mirar si fer memset */
+void fill_structures(int sock, struct sockaddr_in *addr_cli)
 {
-	/* Fills the client address struct for the binding */
-        /* TO DO: mirar si fer memset */
+	
         addr_cli->sin_family = AF_INET;
         addr_cli->sin_addr.s_addr = htonl(INADDR_ANY);
         addr_cli->sin_port = htons(0);
-        /* Binding */
-        if(bind(sock, (struct sockaddr *)&addr_cli,
+        if(bind(sock, (struct sockaddr *)addr_cli,
                        sizeof(struct sockaddr_in))<0)
         {
                 perror("Error amb el binding del socket:");
                 exit(-1);
         }
 
-        /* Gets the IP of the host by its name */
+        /*ent = gethostbyname(dataconfig.nom_server);
 
-        ent = gethostbyname(dataconfig.nom_server);
 
-        /* Fills the server address struct where we send the data */
-        /* TO DO: mirar si fer memset */
         addr_server->sin_family = AF_INET;
         addr_server->sin_addr.s_addr = (((struct in_addr *)ent->h_addr)
                                         ->s_addr);
         addr_server->sin_port = htons(dataconfig.port_server);
 
-        /* Fills register package */
         memset(&register_pack,0,sizeof(register_pack));
         register_pack->tipus_paquet = 0x00;
         strcpy(register_pack->nom_equip,dataconfig.nom_equip);
         strcpy(register_pack->MAC_addr,dataconfig.MAC_equip);
         strcpy(register_pack->num_aleatori,"");
-        strcpy(register_pack->dades,"");
+        strcpy(register_pack->dades,"");*/
 
 }
 
