@@ -44,9 +44,11 @@ int main(int argc, char *argv[])
 	struct sockaddr_in	addr_cli,addr_server;
 	struct hostent *ent = malloc(sizeof(*ent));
 
-	struct register_package register_pack;
+	struct register_package register_pack, *recv_register_pack = malloc(sizeof(*ent));
 
 	int sock;
+
+	int a;
 
 	if(argc > 1)
 	{
@@ -55,36 +57,33 @@ int main(int argc, char *argv[])
 			cfg_file = change_cfg_filename(argc, argv);
 		}
 	}
-	
-	/* Function that collects configuration data */
 
 	dataconfig = collect_config_data(cfg_file);
-	
 	strcpy(register_pack.nom_equip,dataconfig.nom_equip); 
 
 	/* Opens UDP socket */
 	if((sock = socket(AF_INET,SOCK_DGRAM,0))<0)
 	{
-		perror("Error al obrir el socket:");
+		perror("Error al obrir el socket UDP:");
 		exit(-1);
 	}
 
 	fill_structures_and_send(sock, &addr_cli, ent, dataconfig, &addr_server, &register_pack);
 
+	/*a = recvfrom(sock, data, 100, 0, (struct sockaddr *) 0, (int *) 0);*/
+	a = recvfrom(sock,recv_register_pack,sizeof(*recv_register_pack),0,(struct sockaddr *)0, (int )0);
+	if(a<0)
+	{
+		perror("Error al rebre informacó des del socket UDP");
+		exit(-1);
+	}
 
+	/* --- */
 
-	/*a = sendto(sock,&register_pack,sizeof(register_pack)+1,0, 
-	    (struct sockaddr*) &addr_server, sizeof(addr_server));
-		if(a < 0)
-		{
-			perror("Error al enviar el paquet");
-			exit(-1);
-		}*/
+	printf("a= %d Dades: %s\n",a, recv_register_pack->dades);
 
+	/* --- */
 
-
-
-	
 	close(sock);
 	return 0;
 }
