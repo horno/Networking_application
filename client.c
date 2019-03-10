@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netdb.h> /* TO DO: es pot utilitzar? */
+#include <sys/select.h>
 
 #include <string.h>
 
@@ -51,6 +52,11 @@ int main(int argc, char *argv[])
 
 	int sock;
 
+	int a;
+
+	struct timeval timeout;
+	fd_set fdset;
+
 	if(argc > 1)
 	{
 		if(strcmp(argv[1],"-c") == 0)
@@ -71,7 +77,23 @@ int main(int argc, char *argv[])
 
 	fill_structures_and_send(sock, &addr_cli, ent, dataconfig, &addr_server, &register_pack);
 	send_register_req(sock, &register_pack, &addr_server);
-	recvfrom_register_req(sock, *recv_register_pack);
+	
+	FD_ZERO(&fdset);
+	FD_SET(sock, &fdset);
+
+	timeout.tv_sec = 5;
+	timeout.tv_usec = 0;
+
+	a = select(8, &fdset, NULL, NULL, &timeout);
+	if(a == 0)
+	{
+		printf("Temps de resposta expirat\n");
+	}else
+	{
+		printf("Select efectuat correctament\n");
+		recvfrom_register_req(sock, *recv_register_pack);
+	}
+
 
 	close(sock);
 	return 0;
