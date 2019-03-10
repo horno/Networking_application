@@ -38,7 +38,7 @@ struct meta_struct{
 	struct sockaddr_in addr_cli, addr_server;
 	struct cfg_data dataconfig;
 	struct hostent *ent;
-	struct register_package register_pack, *recv_register_pack;
+	struct register_package register_pack, recv_register_pack;
 };
 
 
@@ -64,8 +64,10 @@ int main(int argc, char *argv[])
 	int debug = 0;
 
     struct meta_struct metastruct;
-    metastruct.ent = malloc(sizeof(metastruct.ent)); /*revisar*/
-    metastruct.recv_register_pack = malloc(sizeof(metastruct.recv_register_pack));
+    metastruct.ent = malloc(sizeof(metastruct.ent));
+    /*metastruct.recv_register_pack = malloc(sizeof(metastruct.recv_register_pack));*/
+
+    memset(&metastruct,0,sizeof (struct meta_struct));
 
 	if(argc > 1)
 	{
@@ -93,24 +95,6 @@ int main(int argc, char *argv[])
 	fill_structures_and_send(sock, &metastruct);
 
 	register_req(sock, debug, &metastruct);
-	/*send_register_req(sock, &register_pack, &addr_server);*/
-	
-	/*FD_ZERO(&fdset);
-	FD_SET(sock, &fdset);
-
-	timeout.tv_sec = 5;
-	timeout.tv_usec = 0;*/
-
-	/*a = select(8, &fdset, NULL, NULL, &timeout);
-	if(a == 0)
-	{
-		printf("Temps de resposta expirat\n");
-	}else
-	{
-		printf("Select efectuat correctament\n");
-		recvfrom_register_req(sock, *recv_register_pack);
-	}*/
-
 
 	close(sock);
 	return 0;
@@ -132,24 +116,24 @@ void register_req(int sock, int debug, struct meta_struct *metastruct)
 	for(i = 0; i<(q-1) && answ == 0; i++)
 	{
 		timeout.tv_sec = s;
-		debugger(debug, "PRIMER PROCÉS DE REGISTRE FET, ESPERANT PEL SEGÜENT");
+		debugger(debug, "PROCÉS DE REGISTRE FET, ESPERANT PEL SEGÜENT");
 		if (select(8, &fdset, NULL, NULL, &timeout) == 0) 
 		{
 			debugger(debug, "Començant procés de registre");
 			answ = register_process(fdset, timeout, sock, debug, metastruct);
+            printf("DEBUGGER -> ANSW DE REGISTER_PROCESS = %d\n",answ);
 		}
 		else
 		{
 			recvfrom_register_req(sock, *metastruct);
-			answ = 1;
 			debugger(debug, "Rebuda resposta a REGISTER_REQ");
-
+			answ = 1;
 		}
 	}
 	if(answ != 0)
 	{
-			debugger(debug, "Començant tractament de resposta de REGISTER_REQ");
-			register_answer_treatment();
+        debugger(debug, "Començant tractament de resposta de REGISTER_REQ");
+        register_answer_treatment();
 	}
 	else
 	{
@@ -163,7 +147,6 @@ int register_process(fd_set fdset, struct timeval timeout, int sock, int debug,
 {
 	int h = 1;
 	int i;
-	int a;
 	int answ = 0;
 	timeout.tv_sec = t;
 	send_register_req(sock, metastruct);
@@ -173,16 +156,14 @@ int register_process(fd_set fdset, struct timeval timeout, int sock, int debug,
 			h++;
 		}
 		timeout.tv_sec = h*t;
-		a = select(8, &fdset, NULL, NULL, &timeout);
-		if(a == 0){
+		if(select(8, &fdset, NULL, NULL, &timeout) == 0){
 			send_register_req(sock, metastruct);
 			debugger(debug, "Enviat REGISTER_REQ ");
 		}else{
 			recvfrom_register_req(sock, *metastruct);
-			answ = 1;
 			debugger(debug, "Rebuda resposta a REGISTER_REQ");
+			answ = 1;
 		}
-		
 	}
 	return answ;
 }
@@ -200,15 +181,19 @@ void debugger(int debug, char message[])
 
 void recvfrom_register_req(int sock, struct meta_struct metastruct)
 {
-	int a = recvfrom(sock,&metastruct.recv_register_pack,sizeof(metastruct.recv_register_pack),0,
+	int a = recvfrom(sock, &metastruct.recv_register_pack,sizeof(metastruct.recv_register_pack),0,
                     (struct sockaddr *)0, (int )0);
 	if(a<0)
 	{
 		perror("Error al rebre informacó des del socket UDP");
 		exit(-1);
 	}
+	printf("MAC: %s\n", metastruct.recv_register_pack.MAC_addr);
+	printf("Equip: %s\n", metastruct.recv_register_pack.nom_equip);
+	printf("Num aleatori: %s\n", metastruct.recv_register_pack.num_aleatori);
+	printf("Tipus paquet: %c\n", metastruct.recv_register_pack.tipus_paquet);
+	printf("Dades: %s\n", metastruct.recv_register_pack.dades);
 
-	printf("Dades: %s\n", metastruct.recv_register_pack->dades);
 }
 
 
