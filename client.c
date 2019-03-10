@@ -11,7 +11,15 @@
 
 
 #define h_addr h_addr_list[0] /* Backward compatibility */
- 
+
+/* Timeout defines */
+#define n 3
+#define t 2
+#define m 4
+#define p 8
+#define s 5
+#define q 3
+
 /* Structures */
 struct cfg_data{ /*TO DO: rename? */
 	char nom_equip[7];
@@ -38,6 +46,11 @@ void fill_structures_and_send(int sock, struct sockaddr_in *addr_cli,
 void send_register_req(int sock, struct register_package *register_pack,
 						struct sockaddr_in *addr_server);
 void recvfrom_register_req(int sock, struct register_package recv_register_pack);
+void register_req(int sock, struct register_package *register_pack,
+						struct sockaddr_in *addr_server, struct register_package recv_register_pack);
+int register_process(fd_set fdset, struct timeval timeout, int sock, struct register_package *register_pack,
+						struct sockaddr_in *addr_server,  struct register_package recv_register_pack);	
+void register_answer_treatment();
 
 /* Main function */
 int main(int argc, char *argv[])
@@ -48,14 +61,14 @@ int main(int argc, char *argv[])
 	struct sockaddr_in	addr_cli,addr_server;
 	struct hostent *ent = malloc(sizeof(*ent));
 
-	struct register_package register_pack, *recv_register_pack = malloc(sizeof(*ent));
+	struct register_package register_pack, *recv_register_pack = malloc(sizeof(*recv_register_pack));
 
 	int sock;
 
-	int a;
+	/*int a;*/
 
-	struct timeval timeout;
-	fd_set fdset;
+	/*struct timeval timeout;
+	fd_set fdset;*/
 
 	if(argc > 1)
 	{
@@ -78,13 +91,13 @@ int main(int argc, char *argv[])
 	fill_structures_and_send(sock, &addr_cli, ent, dataconfig, &addr_server, &register_pack);
 	send_register_req(sock, &register_pack, &addr_server);
 	
-	FD_ZERO(&fdset);
+	/*FD_ZERO(&fdset);
 	FD_SET(sock, &fdset);
 
 	timeout.tv_sec = 5;
-	timeout.tv_usec = 0;
+	timeout.tv_usec = 0;*/
 
-	a = select(8, &fdset, NULL, NULL, &timeout);
+	/*a = select(8, &fdset, NULL, NULL, &timeout);
 	if(a == 0)
 	{
 		printf("Temps de resposta expirat\n");
@@ -92,11 +105,78 @@ int main(int argc, char *argv[])
 	{
 		printf("Select efectuat correctament\n");
 		recvfrom_register_req(sock, *recv_register_pack);
-	}
+	}*/
 
 
 	close(sock);
 	return 0;
+}
+void register_req(int sock, struct register_package *register_pack,
+						struct sockaddr_in *addr_server, struct register_package recv_register_pack)
+{
+	int i;
+	int answ;
+	struct timeval timeout;
+
+	fd_set fdset;
+	FD_ZERO(&fdset);
+	FD_SET(sock, &fdset);
+
+	timeout.tv_usec = 0;
+
+	answ  = register_process(fdset, timeout, sock, register_pack, addr_server, recv_register_pack);
+	for(i = 0; i<(q-1) && answ == 0; i++)
+	{
+		timeout.tv_sec = s;
+
+		if (select(8, &fdset, NULL, NULL, &timeout) == 0) 
+		{
+			answ = register_process(fdset, timeout, sock, register_pack, addr_server, recv_register_pack);
+		}
+		else
+		{
+			recvfrom_register_req(sock, recv_register_pack);
+			answ = 1;
+		}
+	}
+	if(answ != 0)
+	{
+			register_answer_treatment();
+	}
+	else
+	{
+		printf("Register answer time expired");
+		exit(-2);
+	}
+}
+/*TODO: Mirar si hi ha problemes de punters amb paràmetres d'entrada*/
+int register_process(fd_set fdset, struct timeval timeout, int sock, struct register_package *register_pack,
+						struct sockaddr_in *addr_server,  struct register_package recv_register_pack)
+{
+	int h = 1;
+	int i;
+	int a;
+	int answ = 0;
+	timeout.tv_sec = t;
+	for(i = 0; i<p && answ == 0;i++){
+		timeout.tv_sec = h*t;
+		a = select(8, &fdset, NULL, NULL, &timeout);
+		if(a == 0){
+			send_register_req(sock, register_pack, addr_server);
+		}else{
+			recvfrom_register_req(sock, recv_register_pack);
+			answ = 1;
+		}
+		if(i>n && (i-n)<m){
+			h++;
+		}
+	}
+	return answ;
+}
+
+void register_answer_treatment()
+{
+	printf("Yay!...treatment!");
 }
 
 void recvfrom_register_req(int sock, struct register_package recv_register_pack)
