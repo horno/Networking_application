@@ -34,6 +34,9 @@ void fill_structures_and_send(int sock, struct sockaddr_in *addr_cli,
 					struct hostent *ent, struct cfg_data dataconfig,
 					struct sockaddr_in *addr_server,
 					struct register_package *register_pack);
+void send_register_req(int sock, struct register_package *register_pack,
+						struct sockaddr_in *addr_server);
+void recvfrom_register_req(int sock, struct register_package recv_register_pack);
 
 /* Main function */
 int main(int argc, char *argv[])
@@ -47,8 +50,6 @@ int main(int argc, char *argv[])
 	struct register_package register_pack, *recv_register_pack = malloc(sizeof(*ent));
 
 	int sock;
-
-	int a;
 
 	if(argc > 1)
 	{
@@ -69,23 +70,39 @@ int main(int argc, char *argv[])
 	}
 
 	fill_structures_and_send(sock, &addr_cli, ent, dataconfig, &addr_server, &register_pack);
+	send_register_req(sock, &register_pack, &addr_server);
+	recvfrom_register_req(sock, *recv_register_pack);
 
-	/*a = recvfrom(sock, data, 100, 0, (struct sockaddr *) 0, (int *) 0);*/
-	a = recvfrom(sock,recv_register_pack,sizeof(*recv_register_pack),0,(struct sockaddr *)0, (int )0);
+	close(sock);
+	return 0;
+}
+
+void recvfrom_register_req(int sock, struct register_package recv_register_pack)
+{
+	int a = recvfrom(sock,&recv_register_pack,sizeof(recv_register_pack),0,(struct sockaddr *)0, (int )0);
 	if(a<0)
 	{
 		perror("Error al rebre informacó des del socket UDP");
 		exit(-1);
 	}
 
-	/* --- */
+	printf("Dades: %s\n", recv_register_pack.dades);
+}
 
-	printf("a= %d Dades: %s\n",a, recv_register_pack->dades);
 
-	/* --- */
+/* Sends the register through the socket sock the register_pack to the addr_server address */
+void send_register_req(int sock, struct register_package *register_pack,
+						struct sockaddr_in *addr_server)
+{
+	int a;
+	a = sendto(sock, register_pack,sizeof(*register_pack)+1,0, 
+	    (struct sockaddr*) addr_server, sizeof(*addr_server));
+		if(a < 0)
+		{
+			perror("Error al enviar el paquet");
+			exit(-1);
+		}
 
-	close(sock);
-	return 0;
 }
 
 /* Fills the client address struct for the binding, binds, Gets the IP of the host by its name */
@@ -96,8 +113,6 @@ void fill_structures_and_send(int sock, struct sockaddr_in *addr_cli,
 					struct sockaddr_in *addr_server,
 					struct register_package *register_pack)
 {
-		int a;
-
         addr_cli->sin_family = AF_INET;
         addr_cli->sin_addr.s_addr = htonl(INADDR_ANY);
         addr_cli->sin_port = htons(0);
@@ -118,16 +133,8 @@ void fill_structures_and_send(int sock, struct sockaddr_in *addr_cli,
         register_pack->tipus_paquet = 0x00;
         strcpy(register_pack->nom_equip,dataconfig.nom_equip);
         strcpy(register_pack->MAC_addr,dataconfig.MAC_equip);
-        strcpy(register_pack->num_aleatori,"");
+        strcpy(register_pack->num_aleatori,"000000");
         strcpy(register_pack->dades,"");
-
-		a = sendto(sock, register_pack,sizeof(*register_pack)+1,0, 
-	    (struct sockaddr*) addr_server, sizeof(*addr_server));
-		if(a < 0)
-		{
-			perror("Error al enviar el paquet");
-			exit(-1);
-		}
 }
 
 char* change_cfg_filename(int argc, char *argv[])
