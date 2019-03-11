@@ -51,7 +51,7 @@ void recvfrom_register_req(int sock, struct meta_struct *metastruct);
 void register_req(int sock, int debug,struct meta_struct *metastruct);
 int register_process(fd_set fdset, struct timeval timeout, int sock, int debug,
                     struct meta_struct *metastruct);	
-void register_answer_treatment();
+int register_answer_treatment(int debug, struct meta_struct metastruct);
 void debugger(int debug, char message[]);
 int select_process(int sock, int debug, fd_set fdset, struct timeval timeout,
                      struct meta_struct *metastruct);
@@ -113,11 +113,13 @@ void register_req(int sock, int debug, struct meta_struct *metastruct)
 
 	debugger(debug, "Començant procés de registre");
 	answ  = register_process(fdset, timeout, sock, debug, metastruct);
+	if(answ == 1){
+		answ = register_answer_treatment(debug, *metastruct);
+	}
 	for(i = 0; i<(q-1) && answ == 0; i++)
 	{
 		timeout.tv_sec = s;
 		debugger(debug, "PROCÉS DE REGISTRE FET, ESPERANT PEL SEGÜENT");
-        /*answ = select_process(sock, debug, fdset, timeout, metastruct);*/
 		if (select(8, &fdset, NULL, NULL, &timeout) == 0) 
 		{
 			debugger(debug, "Començant procés de registre");
@@ -127,15 +129,14 @@ void register_req(int sock, int debug, struct meta_struct *metastruct)
 		{
 			recvfrom_register_req(sock, metastruct);
 			debugger(debug, "Rebuda resposta a REGISTER_REQ: register_req");
-			answ = 1;
+			answ = register_answer_treatment(debug, *metastruct);
 		}
+		if(answ == 1){
+		answ = register_answer_treatment(debug, *metastruct);
 	}
-	if(answ != 0)
-	{
-        debugger(debug, "Començant tractament de resposta de REGISTER_REQ");
-        register_answer_treatment();
+
 	}
-	else
+	if(answ == 0)
 	{
 		printf("Register answer time expired");
 		exit(-2);
@@ -173,13 +174,32 @@ int select_process(int sock, int debug, fd_set fdset, struct timeval timeout,
 			recvfrom_register_req(sock, metastruct);
 			debugger(debug, "Rebuda resposta a REGISTER_REQ");
 			answ = 1;
+			/* ---  answ = register_answer_treatment(debug, *metastruct);*/
 		}
     return answ;
 }
 
-void register_answer_treatment()
+int register_answer_treatment(int debug, struct meta_struct metastruct)
 {
-	printf("Yay!...treatment!\n");
+	if(metastruct.recv_register_pack.tipus_paquet == 0x01){
+		debugger(debug, "Paquet rebut, REGISTER_ACK");
+		return 1;
+	}else if(metastruct.recv_register_pack.tipus_paquet == 0x02){
+		debugger(debug, "Paquet rebut, REGISTER_NACK");
+		return 0;
+	}else if(metastruct.recv_register_pack.tipus_paquet == 0x03){
+		debugger(debug, "Paquet rebut, REGISTER_REJ");
+		printf("El registre ha estat rebutjat. Motiu: %s\n",metastruct.recv_register_pack.dades);
+		exit(-1);
+	}else if(metastruct.recv_register_pack.tipus_paquet == 0x09){
+		debugger(debug, "Paquet rebut, ERROR");
+		printf("Error de protocol");
+		exit(-2);
+	}else{
+		debugger(debug,"Paquet rebut, NO IDENTIFICAT");
+		exit(-2);
+	}
+
 }
 void debugger(int debug, char message[])
 {
@@ -197,11 +217,11 @@ void recvfrom_register_req(int sock, struct meta_struct *metastruct)
 		perror("Error al rebre informacó des del socket UDP");
 		exit(-1);
 	}
-	printf("MAC: %s\n", metastruct->recv_register_pack.MAC_addr);
+	/*printf("MAC: %s\n", metastruct->recv_register_pack.MAC_addr);
 	printf("Equip: %s\n", metastruct->recv_register_pack.nom_equip);
 	printf("Num aleatori: %s\n", metastruct->recv_register_pack.num_aleatori);
-	printf("Tipus paquet: %c\n", metastruct->recv_register_pack.tipus_paquet);
-	printf("Dades: %s\n", metastruct->recv_register_pack.dades);
+	printf("Tipus paquet: %u\n", metastruct->recv_register_pack.tipus_paquet);
+	printf("Dades: %s\n", metastruct->recv_register_pack.dades);*/
 
 }
 
@@ -209,15 +229,12 @@ void recvfrom_register_req(int sock, struct meta_struct *metastruct)
 /* Sends the register through the socket sock the register_pack to the addr_server address */
 void send_register_req(int sock, struct meta_struct *metastruct)
 {
-	int a; //TODO: juntar-ho i comprovar que funciona 
-	a = sendto(sock, &metastruct->register_pack,sizeof(metastruct->register_pack)+1,0, 
-	    (struct sockaddr*) &metastruct->addr_server, sizeof(metastruct->addr_server));
-		if(a < 0)
+		if(sendto(sock, &metastruct->register_pack,sizeof(metastruct->register_pack)+1,0, 
+	    (struct sockaddr*) &metastruct->addr_server, sizeof(metastruct->addr_server)) < 0)
 		{
 			perror("Error al enviar el paquet");
 			exit(-1);
 		}
-
 }
 
 /* Fills the client address struct for the binding, binds, Gets the IP of the host by its name */
