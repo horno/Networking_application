@@ -174,7 +174,6 @@ int select_process(int sock, int debug, fd_set fdset, struct timeval timeout,
 			recvfrom_register_req(sock, metastruct);
 			debugger(debug, "Rebuda resposta a REGISTER_REQ");
 			answ = 1;
-			/* ---  answ = register_answer_treatment(debug, *metastruct);*/
 		}
     return answ;
 }
@@ -217,14 +216,7 @@ void recvfrom_register_req(int sock, struct meta_struct *metastruct)
 		perror("Error al rebre informacó des del socket UDP");
 		exit(-1);
 	}
-	/*printf("MAC: %s\n", metastruct->recv_register_pack.MAC_addr);
-	printf("Equip: %s\n", metastruct->recv_register_pack.nom_equip);
-	printf("Num aleatori: %s\n", metastruct->recv_register_pack.num_aleatori);
-	printf("Tipus paquet: %u\n", metastruct->recv_register_pack.tipus_paquet);
-	printf("Dades: %s\n", metastruct->recv_register_pack.dades);*/
-
 }
-
 
 /* Sends the register through the socket sock the register_pack to the addr_server address */
 void send_register_req(int sock, struct meta_struct *metastruct)
