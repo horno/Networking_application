@@ -157,16 +157,6 @@ int register_process(fd_set fdset, struct timeval timeout, int sock, int debug,
 		}
 		timeout.tv_sec = h*t;
         answ = select_process(sock, debug, fdset, timeout, metastruct);
-        /*FD_ZERO(&fdset);
-        FD_SET(sock, &fdset);
-        if(select(8, &fdset, NULL, NULL, &timeout) == 0){
-			send_register_req(sock, metastruct);
-			debugger(debug, "Enviat REGISTER_REQ ");
-		}else{
-			recvfrom_register_req(sock, metastruct);
-			debugger(debug, "Rebuda resposta a REGISTER_REQ");
-			answ = 1;
-		}*/
 	}
 	return answ;
 }
@@ -219,7 +209,7 @@ void recvfrom_register_req(int sock, struct meta_struct *metastruct)
 /* Sends the register through the socket sock the register_pack to the addr_server address */
 void send_register_req(int sock, struct meta_struct *metastruct)
 {
-	int a;
+	int a; //TODO: juntar-ho i comprovar que funciona 
 	a = sendto(sock, &metastruct->register_pack,sizeof(metastruct->register_pack)+1,0, 
 	    (struct sockaddr*) &metastruct->addr_server, sizeof(metastruct->addr_server));
 		if(a < 0)
