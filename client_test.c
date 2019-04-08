@@ -111,14 +111,13 @@ void register_req(int sock, int debug, struct meta_struct *metastruct)
 	FD_SET(sock, &fdset);
 	timeout.tv_usec = 0;
 
-		debugger(debug, "Començant procés de registre");
-		answ = register_process(fdset, timeout, sock, debug, metastruct);
+	debugger(debug, "Començant procés de registre");
+	answ = register_process(fdset, timeout, sock, debug, metastruct);
 	for(i = 0; i<(q-1) && answ == 0; i++)
 	{
-		if(answ == 0){
-			debugger(debug, "PROCÉS DE REGISTRE FET, ESPERANT PEL SEGÜENT");			
-			sleep(s);
-		}
+		debugger(debug, "PROCÉS DE REGISTRE FET, ESPERANT PEL SEGÜENT");			
+		sleep(s);
+		
 		debugger(debug, "Començant procés de registre");
 		answ = register_process(fdset, timeout, sock, debug, metastruct);
 	}
