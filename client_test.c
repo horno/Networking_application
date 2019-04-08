@@ -111,30 +111,16 @@ void register_req(int sock, int debug, struct meta_struct *metastruct)
 	FD_SET(sock, &fdset);
 	timeout.tv_usec = 0;
 
-	debugger(debug, "Començant procés de registre");
-	answ  = register_process(fdset, timeout, sock, debug, metastruct);
-	if(answ == 1){
-		answ = register_answer_treatment(debug, *metastruct);
-	}
+		debugger(debug, "Començant procés de registre");
+		answ = register_process(fdset, timeout, sock, debug, metastruct);
 	for(i = 0; i<(q-1) && answ == 0; i++)
 	{
-		timeout.tv_sec = s;
-		debugger(debug, "PROCÉS DE REGISTRE FET, ESPERANT PEL SEGÜENT");
-		if (select(8, &fdset, NULL, NULL, &timeout) == 0) 
-		{
-			debugger(debug, "Començant procés de registre");
-			answ = register_process(fdset, timeout, sock, debug, metastruct);
+		if(answ == 0){
+			debugger(debug, "PROCÉS DE REGISTRE FET, ESPERANT PEL SEGÜENT");			
+			sleep(s);
 		}
-		else
-		{
-			recvfrom_register_req(sock, metastruct);
-			debugger(debug, "Rebuda resposta a REGISTER_REQ: register_req");
-			answ = register_answer_treatment(debug, *metastruct);
-		}
-		if(answ == 1){
-		answ = register_answer_treatment(debug, *metastruct);
-	}
-
+		debugger(debug, "Començant procés de registre");
+		answ = register_process(fdset, timeout, sock, debug, metastruct);
 	}
 	if(answ == 0)
 	{
@@ -151,7 +137,7 @@ int register_process(fd_set fdset, struct timeval timeout, int sock, int debug,
 	int answ = 0;
 	timeout.tv_sec = t;
 	send_register_req(sock, metastruct);
-	debugger(debug, "Enviat REGISTER_REQ ");
+	debugger(debug, "Enviat REGISTER_REQ");
 	for(i = 1; i<p && answ == 0;i++){
 		if(i>=n && (i-n+1)<m){
 			h++;
@@ -169,7 +155,7 @@ int select_process(int sock, int debug, fd_set fdset, struct timeval timeout,
     FD_SET(sock, &fdset);
     if(select(8, &fdset, NULL, NULL, &timeout) == 0){
 			send_register_req(sock, metastruct);
-			debugger(debug, "Enviat REGISTER_REQ ");
+			debugger(debug, "Enviat REGISTER_REQ");
 		}else{
 			recvfrom_register_req(sock, metastruct);
 			debugger(debug, "Rebuda resposta a REGISTER_REQ");

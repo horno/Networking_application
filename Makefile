@@ -4,7 +4,7 @@
 #
 LDFLAGS= -Wall -ansi -pedantic       
 
-all: client
+all: client client_test
 
 
 client: client.c
@@ -14,3 +14,4 @@ client_test: client_test.c
 
 clean:
 	rm -f client
+	rm -f client_test
