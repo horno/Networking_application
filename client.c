@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 	metastruct.dataconfig = collect_config_data(cfg_file);
 	strcpy(metastruct.register_pack.nom_equip,metastruct.dataconfig.nom_equip); 
 
-	debugger(debug, "Opening socket");
+	debugger(debug, "Opening UDP socket");
 	/* Opens UDP socket */
 	if((sock = socket(AF_INET,SOCK_DGRAM,0))<0)
 	{
