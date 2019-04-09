@@ -58,7 +58,7 @@ void debugger(int debug, char message[]);
 int select_process(int sock, int debug, fd_set fdset, struct timeval timeout,
                      struct meta_struct *metastruct);
 void alive(int sock, int debug ,struct meta_struct *metastruct);
-
+int authenticate_alive(struct PDU_package register_pack, struct PDU_package alive_pack);
 
 /* TODO: Implementar debugguer a cada funció en ves de main? */
 /* Main function */
@@ -131,19 +131,25 @@ void alive(int sock, int debug, struct meta_struct *metastruct)
 			i++;
 		}else{
 			recv_alive_UDP = recvfrom_UDP(sock);
-
-			if(UDP_answer_treatment(debug, recv_alive_UDP) == 1){
+			if(UDP_answer_treatment(debug, recv_alive_UDP) == 1 &&
+			   authenticate_alive(metastruct->recv_reg_UDP,recv_alive_UDP) == 0){
 				i = 0;
-			}else if(UDP_answer_treatment(debug, recv_alive_UDP) == 0){
-				i++;
+			}else if(UDP_answer_treatment(debug, recv_alive_UDP) == 2 &&
+					 authenticate_alive(metastruct->recv_reg_UDP,recv_alive_UDP) == 0){
+				i = u;				
 			}else{
-				i = u;
+				i++;
 			}
 		}
 	}
 }
 int authenticate_alive(struct PDU_package register_pack, struct PDU_package alive_pack){
-return 2;
+	if(strcmp(register_pack.MAC_addr,alive_pack.MAC_addr) != 0 || 
+	   strcmp(register_pack.nom_equip,alive_pack.nom_equip) != 0){
+		   return 1;
+	}else{
+		return 0;
+	}
 }
 void register_req(int sock, int debug, struct meta_struct *metastruct)
 {
