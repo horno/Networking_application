@@ -259,7 +259,16 @@ void recvfrom_UDP(int sock, struct meta_struct *metastruct)
 		exit(-1);
 	}
 }
-
+void recvfrom_UDP_test(int sock, struct PDU_package torecv_UDP_pack)
+{
+	int a = recvfrom(sock, &torecv_UDP_pack,sizeof(torecv_UDP_pack),0,
+                    (struct sockaddr *)0, (int )0);
+	if(a<0)
+	{
+		perror("Error al rebre informacó des del socket UDP");
+		exit(-1);
+	}
+}
 /* Sends the register through the socket sock the tosend_UDP_pack to the addr_server address */
 void send_UDP_pack(int sock, struct meta_struct *metastruct)
 {
