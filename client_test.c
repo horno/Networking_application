@@ -72,7 +72,6 @@ int main(int argc, char *argv[])
     metastruct.ent = malloc(sizeof(metastruct.ent));
 
     memset(&metastruct,0,sizeof (struct meta_struct));
-
 	if(argc > 1)
 	{
 		if(strcmp(argv[1],"-c") == 0)
@@ -84,6 +83,7 @@ int main(int argc, char *argv[])
 			debug = 1;
 		}
 	}
+	debugger(debug, "ESTAT: DISCONNECTED");
 	debugger(debug, "Collecting configuration data");
 	metastruct.dataconfig = collect_config_data(cfg_file);
 	strcpy(metastruct.tosend_UDP_pack.nom_equip,metastruct.dataconfig.nom_equip); 
@@ -112,7 +112,7 @@ void alive(int sock, int debug, struct meta_struct *metastruct)
 	int i = 0;
 	fd_set fdset;
 	struct timeval timeout;
-	debugger(debug, "Estat: WAIT_REG");
+	debugger(debug, "Estat: ALIVE");
 	metastruct->tosend_UDP_pack.tipus_paquet = 0x10;
 	strcpy(metastruct->tosend_UDP_pack.num_aleatori,
 					metastruct->torecv_UDP_pack.num_aleatori);
@@ -153,6 +153,8 @@ void register_req(int sock, int debug, struct meta_struct *metastruct)
 	FD_SET(sock, &fdset);
 	timeout.tv_usec = 0;
 	metastruct->tosend_UDP_pack.tipus_paquet = 0x00;
+	strcpy(metastruct->tosend_UDP_pack.num_aleatori,"000000");
+
 
 	debugger(debug, "Començant procés de registre");
 	debugger(debug, "ESTAT: WAIT_REG");
@@ -228,7 +230,6 @@ int UDP_answer_treatment(int debug, struct meta_struct metastruct) /*TODO: canvi
 		exit(-2);
 	}else if(metastruct.torecv_UDP_pack.tipus_paquet == 0x11){
 		debugger(debug, "Paquet rebut, ALIVE_ACK");
-		debugger(debug, "ESTAT: ALIVE");
 		return 1;
 	}else if(metastruct.torecv_UDP_pack.tipus_paquet == 0x12){
 		debugger(debug, "Paquet rebut, ALIVE_NACK");
