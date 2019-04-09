@@ -228,6 +228,7 @@ int UDP_answer_treatment(int debug, struct meta_struct metastruct) /*TODO: canvi
 		exit(-2);
 	}else if(metastruct.torecv_UDP_pack.tipus_paquet == 0x11){
 		debugger(debug, "Paquet rebut, ALIVE_ACK");
+		debugger(debug, "ESTAT: ALIVE");
 		return 1;
 	}else if(metastruct.torecv_UDP_pack.tipus_paquet == 0x12){
 		debugger(debug, "Paquet rebut, ALIVE_NACK");
