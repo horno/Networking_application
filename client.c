@@ -27,7 +27,7 @@ struct cfg_data{ /*TO DO: rename? */
 	char nom_server[20]; /*TODO Pot ser més gran? */
 	int port_server;
 };
-struct register_package{
+struct PDU_package{
 	unsigned char tipus_paquet;
 	char nom_equip[7];
 	char MAC_addr[13];
@@ -38,7 +38,7 @@ struct meta_struct{
 	struct sockaddr_in addr_cli, addr_server;
 	struct cfg_data dataconfig;
 	struct hostent *ent;
-	struct register_package register_pack, recv_register_pack;
+	struct PDU_package register_pack, recv_register_pack; /*TODO Puc usar 1 sol?*/
 };
 
 
@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 	fill_structures_and_send(sock, &metastruct);
 
 	register_req(sock, debug, &metastruct);
-
+	
 	close(sock);
 	return 0;
 }
@@ -112,29 +112,14 @@ void register_req(int sock, int debug, struct meta_struct *metastruct)
 	timeout.tv_usec = 0;
 
 	debugger(debug, "Començant procés de registre");
-	answ  = register_process(fdset, timeout, sock, debug, metastruct);
-	if(answ == 1){
-		answ = register_answer_treatment(debug, *metastruct);
-	}
-	for(i = 0; i<(q-1) && answ == 0; i++)
+	answ = register_process(fdset, timeout, sock, debug, metastruct);
+	for(i = 0; i<(q-1) && answ != 1; i++)
 	{
-		timeout.tv_sec = s;
-		debugger(debug, "PROCÉS DE REGISTRE FET, ESPERANT PEL SEGÜENT");
-		if (select(8, &fdset, NULL, NULL, &timeout) == 0) 
-		{
-			debugger(debug, "Començant procés de registre");
-			answ = register_process(fdset, timeout, sock, debug, metastruct);
-		}
-		else
-		{
-			recvfrom_register_req(sock, metastruct);
-			debugger(debug, "Rebuda resposta a REGISTER_REQ: register_req");
-			answ = register_answer_treatment(debug, *metastruct);
-		}
-		if(answ == 1){
-		answ = register_answer_treatment(debug, *metastruct);
-	}
-
+		debugger(debug, "PROCÉS DE REGISTRE FET, ESPERANT PEL SEGÜENT");			
+		sleep(s);
+		
+		debugger(debug, "Començant procés de registre");
+		answ = register_process(fdset, timeout, sock, debug, metastruct);
 	}
 	if(answ == 0)
 	{
@@ -151,7 +136,7 @@ int register_process(fd_set fdset, struct timeval timeout, int sock, int debug,
 	int answ = 0;
 	timeout.tv_sec = t;
 	send_register_req(sock, metastruct);
-	debugger(debug, "Enviat REGISTER_REQ ");
+	debugger(debug, "Enviat REGISTER_REQ");
 	for(i = 1; i<p && answ == 0;i++){
 		if(i>=n && (i-n+1)<m){
 			h++;
@@ -169,11 +154,11 @@ int select_process(int sock, int debug, fd_set fdset, struct timeval timeout,
     FD_SET(sock, &fdset);
     if(select(8, &fdset, NULL, NULL, &timeout) == 0){
 			send_register_req(sock, metastruct);
-			debugger(debug, "Enviat REGISTER_REQ ");
+			debugger(debug, "Enviat REGISTER_REQ");
 		}else{
 			recvfrom_register_req(sock, metastruct);
-			debugger(debug, "Rebuda resposta a REGISTER_REQ");
-			answ = 1;
+			debugger(debug, "Rebuda resposta a REGISTER_REQ");		
+			answ = register_answer_treatment(debug, *metastruct);
 		}
     return answ;
 }
@@ -185,7 +170,7 @@ int register_answer_treatment(int debug, struct meta_struct metastruct)
 		return 1;
 	}else if(metastruct.recv_register_pack.tipus_paquet == 0x02){
 		debugger(debug, "Paquet rebut, REGISTER_NACK");
-		return 0;
+		return 2;
 	}else if(metastruct.recv_register_pack.tipus_paquet == 0x03){
 		debugger(debug, "Paquet rebut, REGISTER_REJ");
 		printf("El registre ha estat rebutjat. Motiu: %s\n",metastruct.recv_register_pack.dades);

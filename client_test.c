@@ -19,6 +19,8 @@
 #define p 8
 #define s 5
 #define q 3
+#define r 3
+#define u 3
 
 /* Structures */
 struct cfg_data{ /*TO DO: rename? */
@@ -27,7 +29,7 @@ struct cfg_data{ /*TO DO: rename? */
 	char nom_server[20]; /*TODO Pot ser més gran? */
 	int port_server;
 };
-struct register_package{
+struct PDU_package{
 	unsigned char tipus_paquet;
 	char nom_equip[7];
 	char MAC_addr[13];
@@ -38,7 +40,7 @@ struct meta_struct{
 	struct sockaddr_in addr_cli, addr_server;
 	struct cfg_data dataconfig;
 	struct hostent *ent;
-	struct register_package register_pack, recv_register_pack;
+	struct PDU_package register_pack, recv_register_pack, alive_pack; /*TODO Puc usar 1 sol?*/
 };
 
 
@@ -96,9 +98,68 @@ int main(int argc, char *argv[])
 	fill_structures_and_send(sock, &metastruct);
 
 	register_req(sock, debug, &metastruct);
+	/*alive_prot();*/
+
 
 	close(sock);
 	return 0;
+}
+/* TODO: Prototip de alive, aquesta funció és de prova i l'únic que pretén és
+enviar un paquet UDP per comprovar que el servidor el rep i, a partir d'allí 
+començar a fer el select, timing, màquina d'estats i tot (tornar a aprendre a usar
+sockets, select...)*/
+void alive_prot(int sock, struct meta_struct *metastruct)
+{
+	if(sendto(sock, &metastruct->register_pack,sizeof(metastruct->register_pack)+1,0, 
+	    (struct sockaddr*) &metastruct->addr_server, sizeof(metastruct->addr_server)) < 0)
+		{
+			perror("Error al enviar el paquet");
+			exit(-1);
+		}
+
+}
+void alive(int sock, int debug, struct meta_struct *metastruct)
+{
+	int i;
+	int answ = 0;
+	struct timeval timeout;
+
+	fd_set fdset;
+	FD_ZERO(&fdset);
+	FD_SET(sock, &fdset);
+	timeout.tv_usec = 0;
+
+	debugger(debug, "Enviat ALIVE_INF");
+	answ = alive_inf(fdset, timeout, sock, debug, metastruct);
+	for(i = 0; i<(u-1) && answ != 1; i++)
+	{
+		sleep(r);
+	
+		debugger(debug, "Enviat ALIVE_INF");		
+		answ = alive_inf(fdset, timeout, sock, debug, metastruct);
+	}
+	if(answ == 0)
+	{
+		printf("Alive answer time expired");
+	}
+}
+int alive_inf(fd_set fdset, struct timeval timeout, int sock, int debug,
+                    struct meta_struct *metastruct)
+{
+	int i;
+	int h = 1;
+	int answ = 0;
+	timeout.tv_sec = t;
+	send_register_req(sock, metastruct);
+	debugger(debug, "Enviat REGISTER_REQ");
+	for(i = 1; i<p && answ == 0;i++){
+		if(i>=n && (i-n+1)<m){
+			h++;
+		}
+		timeout.tv_sec = h*t;
+        answ = select_process(sock, debug, fdset, timeout, metastruct);
+	}
+	return answ;
 }
 void register_req(int sock, int debug, struct meta_struct *metastruct)
 {
@@ -113,7 +174,7 @@ void register_req(int sock, int debug, struct meta_struct *metastruct)
 
 	debugger(debug, "Començant procés de registre");
 	answ = register_process(fdset, timeout, sock, debug, metastruct);
-	for(i = 0; i<(q-1) && answ == 0; i++)
+	for(i = 0; i<(q-1) && answ != 1; i++)
 	{
 		debugger(debug, "PROCÉS DE REGISTRE FET, ESPERANT PEL SEGÜENT");			
 		sleep(s);
@@ -157,8 +218,8 @@ int select_process(int sock, int debug, fd_set fdset, struct timeval timeout,
 			debugger(debug, "Enviat REGISTER_REQ");
 		}else{
 			recvfrom_register_req(sock, metastruct);
-			debugger(debug, "Rebuda resposta a REGISTER_REQ");
-			answ = 1;
+			debugger(debug, "Rebuda resposta a REGISTER_REQ");		
+			answ = register_answer_treatment(debug, *metastruct);
 		}
     return answ;
 }
@@ -170,7 +231,7 @@ int register_answer_treatment(int debug, struct meta_struct metastruct)
 		return 1;
 	}else if(metastruct.recv_register_pack.tipus_paquet == 0x02){
 		debugger(debug, "Paquet rebut, REGISTER_NACK");
-		return 0;
+		return 2;
 	}else if(metastruct.recv_register_pack.tipus_paquet == 0x03){
 		debugger(debug, "Paquet rebut, REGISTER_REJ");
 		printf("El registre ha estat rebutjat. Motiu: %s\n",metastruct.recv_register_pack.dades);
