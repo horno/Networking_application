@@ -37,39 +37,40 @@ struct PDU_package{
 	char dades[50];
 };
 struct meta_struct{
+	int sock;
 	struct sockaddr_in addr_cli, addr_server;
-	struct cfg_data dataconfig;
-	struct hostent *ent;
-	struct PDU_package tosend_UDP_pack, recv_rej_UDP_pack; /*TODO Utilitzar paquets de dalt a vall*/
+	struct PDU_package tosend_UDP_pack, recv_reg_UDP; /*TODO Utilitzar paquets de dalt a*/
 };
 
 
 /* Function declarations */
 struct cfg_data collect_config_data(char cfg_file[]);
 char* change_cfg_filename(int argc, char *argv[]);
-void fill_structures_and_send(int sock, struct meta_struct *metastruct);
-void send_UDP_pack(int sock, struct meta_struct *metastruct);
-void recvfrom_UDP(int sock, struct meta_struct *metastruct);
-void register_req(int sock, int debug,struct meta_struct *metastruct);
-int register_process(fd_set fdset, struct timeval timeout, int sock, int debug,
+void fill_structures_and_send(struct cfg_data dataconfig, struct hostent *ent, 
+							  struct meta_struct *metastruct);
+void send_UDP_pack(struct meta_struct *metastruct);
+struct PDU_package recvfrom_UDP(int sock);
+void register_req(int debug,struct meta_struct *metastruct);
+int register_process(fd_set fdset, struct timeval timeout, int debug,
                     struct meta_struct *metastruct);	
-int UDP_answer_treatment(int debug, struct meta_struct metastruct);
+int UDP_answer_treatment(int debug, struct PDU_package recv_reg_UDP);
 void debugger(int debug, char message[]);
-int select_process(int sock, int debug, fd_set fdset, struct timeval timeout,
+int select_process(int debug, fd_set fdset, struct timeval timeout,
                      struct meta_struct *metastruct);
-void alive(int sock, int debug ,struct meta_struct *metastruct);
-
+void alive(int debug ,struct meta_struct *metastruct);
+int authenticate_alive(int debug, struct PDU_package register_pack, struct PDU_package alive_pack);
 
 /* TODO: Implementar debugguer a cada funció en ves de main? */
 /* Main function */
 int main(int argc, char *argv[])
 {
 	char *cfg_file = "client.cfg";
-	int sock;
 	int debug = 0;
 
     struct meta_struct metastruct;
-    metastruct.ent = malloc(sizeof(metastruct.ent));
+	struct cfg_data dataconfig;
+	struct hostent *ent;
+    ent = malloc(sizeof(ent));
 
     memset(&metastruct,0,sizeof (struct meta_struct));
 	if(argc > 1)
@@ -85,64 +86,76 @@ int main(int argc, char *argv[])
 	}
 	debugger(debug, "ESTAT: DISCONNECTED");
 	debugger(debug, "Collecting configuration data");
-	metastruct.dataconfig = collect_config_data(cfg_file);
-	strcpy(metastruct.tosend_UDP_pack.nom_equip,metastruct.dataconfig.nom_equip); 
+	dataconfig = collect_config_data(cfg_file);
+	strcpy(metastruct.tosend_UDP_pack.nom_equip,dataconfig.nom_equip); 
 
 	debugger(debug, "Opening UDP socket");
 	/* Opens UDP socket */
-	if((sock = socket(AF_INET,SOCK_DGRAM,0))<0)
+	if((metastruct.sock = socket(AF_INET,SOCK_DGRAM,0))<0)
 	{
 		perror("Error al obrir el socket UDP:");
 		exit(-1);
 	}
 
-	fill_structures_and_send(sock, &metastruct);
+	fill_structures_and_send(dataconfig, ent, &metastruct);
 
 	while(1){
-		register_req(sock, debug, &metastruct);
-		alive(sock, debug, &metastruct);
+		register_req(debug, &metastruct);
+		alive(debug, &metastruct);
 	}
 
-	close(sock);
+	close(metastruct.sock);
 	return 0;
 }
 
-void alive(int sock, int debug, struct meta_struct *metastruct)
+void alive(int debug, struct meta_struct *metastruct)
 {
 	int i = 0;
 	fd_set fdset;
 	struct timeval timeout;
+	struct PDU_package recv_alive_UDP;
 	debugger(debug, "Estat: ALIVE");
 	metastruct->tosend_UDP_pack.tipus_paquet = 0x10;
 	strcpy(metastruct->tosend_UDP_pack.num_aleatori,
-					metastruct->recv_rej_UDP_pack.num_aleatori);
+					metastruct->recv_reg_UDP.num_aleatori);
 	while(i < u){
 		debugger(debug, "Enviat ALIVE_INF");
-		send_UDP_pack(sock,metastruct);
+		send_UDP_pack(metastruct);
 		sleep(r);
 		
     	FD_ZERO(&fdset);
-    	FD_SET(sock, &fdset);
+    	FD_SET(metastruct->sock, &fdset);
 		timeout.tv_usec = 0;
 		timeout.tv_sec = 0;
     	if(select(8, &fdset, NULL, NULL, &timeout) == 0){
 			debugger(debug, "No s'ha rebut resposta a ALIVE_INF");
 			i++;
 		}else{
-			recvfrom_UDP(sock, metastruct);
-			if(UDP_answer_treatment(debug, *metastruct) == 1){
+			recv_alive_UDP = recvfrom_UDP(metastruct->sock);
+			if(UDP_answer_treatment(debug, recv_alive_UDP) == 1 &&
+			   authenticate_alive(debug, metastruct->recv_reg_UDP,recv_alive_UDP) == 0){
 				i = 0;
-			}else if(UDP_answer_treatment(debug, *metastruct) == 0){
-				i++;
+			}else if(UDP_answer_treatment(debug, recv_alive_UDP) == 2 &&
+					 authenticate_alive(debug, metastruct->recv_reg_UDP,recv_alive_UDP) == 0){
+				i = u;				
 			}else{
-				i = u;
+				i++;
 			}
 		}
 	}
 }
-
-
-void register_req(int sock, int debug, struct meta_struct *metastruct)
+int authenticate_alive(int debug,struct PDU_package register_pack, struct PDU_package alive_pack)
+{
+	debugger(debug, "Autenticant el paquet Alive rebut");
+	if(strcmp(register_pack.MAC_addr, alive_pack.MAC_addr) != 0 || 
+	   strcmp(register_pack.nom_equip, alive_pack.nom_equip) != 0){
+		   debugger(debug, "Paquet Alive no correspon al servidor registrat, paquet ignorat ");
+		   return 1;
+	}else{
+		return 0;
+	}
+}
+void register_req(int debug, struct meta_struct *metastruct)
 {
 	int i;
 	int answ = 0;
@@ -150,7 +163,7 @@ void register_req(int sock, int debug, struct meta_struct *metastruct)
 
 	fd_set fdset;
 	FD_ZERO(&fdset);
-	FD_SET(sock, &fdset);
+	FD_SET(metastruct->sock, &fdset);
 	timeout.tv_usec = 0;
 	metastruct->tosend_UDP_pack.tipus_paquet = 0x00;
 	strcpy(metastruct->tosend_UDP_pack.num_aleatori,"000000");
@@ -158,14 +171,14 @@ void register_req(int sock, int debug, struct meta_struct *metastruct)
 
 	debugger(debug, "Començant procés de registre");
 	debugger(debug, "ESTAT: WAIT_REG");
-	answ = register_process(fdset, timeout, sock, debug, metastruct);
+	answ = register_process(fdset, timeout, debug, metastruct);
 	for(i = 0; i<(q-1) && answ != 1; i++)
 	{
 		debugger(debug, "PROCÉS DE REGISTRE FET, ESPERANT PEL SEGÜENT");			
 		sleep(s);
 		
 		debugger(debug, "Començant procés de registre");
-		answ = register_process(fdset, timeout, sock, debug, metastruct);
+		answ = register_process(fdset, timeout, debug, metastruct);
 	}
 	if(answ == 0)
 	{
@@ -174,67 +187,66 @@ void register_req(int sock, int debug, struct meta_struct *metastruct)
 	}
 }
 /*TODO: Mirar si hi ha problemes de punters amb paràmetres d'entrada*/
-int register_process(fd_set fdset, struct timeval timeout, int sock, int debug,
+int register_process(fd_set fdset, struct timeval timeout, int debug,
                     struct meta_struct *metastruct)
 {
 	int i;
 	int h = 1;
 	int answ = 0;
 	timeout.tv_sec = t;
-	send_UDP_pack(sock, metastruct);
+	send_UDP_pack(metastruct);
 	debugger(debug, "Enviat REGISTER_REQ");
 	for(i = 1; i<p && answ == 0;i++){
 		if(i>=n && (i-n+1)<m){
 			h++;
 		}
 		timeout.tv_sec = h*t;
-        answ = select_process(sock, debug, fdset, timeout, metastruct);
+        answ = select_process(debug, fdset, timeout, metastruct);
 	}
 	return answ;
 }
-int select_process(int sock, int debug, fd_set fdset, struct timeval timeout,
+int select_process(int debug, fd_set fdset, struct timeval timeout,
                      struct meta_struct *metastruct)
 {
     int answ = 0;
     FD_ZERO(&fdset);
-    FD_SET(sock, &fdset);
+    FD_SET(metastruct->sock, &fdset);
     if(select(8, &fdset, NULL, NULL, &timeout) == 0){
-			send_UDP_pack(sock, metastruct);
+			send_UDP_pack(metastruct);
 			debugger(debug, "Enviat REGISTER_REQ");
 	}else{
-			recvfrom_UDP(sock, metastruct);
-			debugger(debug, "Rebuda resposta a REGISTER_REQ");		
-			answ = UDP_answer_treatment(debug, *metastruct);
+			debugger(debug, "Rebuda resposta a REGISTER_REQ");
+			metastruct->recv_reg_UDP =  recvfrom_UDP(metastruct->sock);
+			answ = UDP_answer_treatment(debug, metastruct->recv_reg_UDP);
 	}
     return answ;
 }
-
-int UDP_answer_treatment(int debug, struct meta_struct metastruct) /*TODO: canviar a switch case*/
+int UDP_answer_treatment(int debug, struct PDU_package recv_reg_UDP) /*TODO: canviar a switch case*/
 {
-	if(metastruct.recv_rej_UDP_pack.tipus_paquet == 0x01){
+	if(recv_reg_UDP.tipus_paquet == 0x01){
 		debugger(debug, "Paquet rebut, REGISTER_ACK");
 		debugger(debug, "ESTAT: REGISTERED");
 		return 1;
-	}else if(metastruct.recv_rej_UDP_pack.tipus_paquet == 0x02){
+	}else if(recv_reg_UDP.tipus_paquet == 0x02){
 		debugger(debug, "Paquet rebut, REGISTER_NACK");
 		return 2;
-	}else if(metastruct.recv_rej_UDP_pack.tipus_paquet == 0x03){
+	}else if(recv_reg_UDP.tipus_paquet == 0x03){
 		debugger(debug, "Paquet rebut, REGISTER_REJ");
 		debugger(debug, "ESTAT: DISCONNECTED");
-		printf("El registre ha estat rebutjat. Motiu: %s\n",metastruct.recv_rej_UDP_pack.dades);
+		printf("El registre ha estat rebutjat. Motiu: %s\n",recv_reg_UDP.dades);
 		exit(-1);
-	}else if(metastruct.recv_rej_UDP_pack.tipus_paquet == 0x09){
+	}else if(recv_reg_UDP.tipus_paquet == 0x09){
 		debugger(debug, "Paquet rebut, ERROR");
 		debugger(debug, "ESTAT: DISCONNECTED");
 		printf("Error de protocol");
 		exit(-2);
-	}else if(metastruct.recv_rej_UDP_pack.tipus_paquet == 0x11){
+	}else if(recv_reg_UDP.tipus_paquet == 0x11){
 		debugger(debug, "Paquet rebut, ALIVE_ACK");
 		return 1;
-	}else if(metastruct.recv_rej_UDP_pack.tipus_paquet == 0x12){
+	}else if(recv_reg_UDP.tipus_paquet == 0x12){
 		debugger(debug, "Paquet rebut, ALIVE_NACK");
 		return 0;
-	}else if(metastruct.recv_rej_UDP_pack.tipus_paquet == 0x13){
+	}else if(recv_reg_UDP.tipus_paquet == 0x13){
 		debugger(debug, "Paquet rebut, ALIVE_REJ");
 		return 2;
 	}else{
@@ -242,38 +254,31 @@ int UDP_answer_treatment(int debug, struct meta_struct metastruct) /*TODO: canvi
 		exit(-2);
 	}
 }
+
 void debugger(int debug, char message[])
 {
 	if(debug == 1){
 		printf("DEBUG ==> %s\n",message);
 	}
 }
-
-void recvfrom_UDP(int sock, struct meta_struct *metastruct)
+struct PDU_package recvfrom_UDP(int sock)
 {
-	int a = recvfrom(sock, &metastruct->recv_rej_UDP_pack,sizeof(metastruct->recv_rej_UDP_pack),0,
+	struct PDU_package recv_reg_UDP;
+	int a = recvfrom(sock, &recv_reg_UDP,sizeof(recv_reg_UDP),0,
                     (struct sockaddr *)0, (int )0);
 	if(a<0)
 	{
 		perror("Error al rebre informacó des del socket UDP");
 		exit(-1);
 	}
-}
-void recvfrom_UDP_test(int sock, struct PDU_package recv_rej_UDP_pack)
-{
-	int a = recvfrom(sock, &recv_rej_UDP_pack,sizeof(recv_rej_UDP_pack),0,
-                    (struct sockaddr *)0, (int )0);
-	if(a<0)
-	{
-		perror("Error al rebre informacó des del socket UDP");
-		exit(-1);
-	}
+	return recv_reg_UDP;
 }
 /* Sends the register through the socket sock the tosend_UDP_pack to the addr_server address */
-void send_UDP_pack(int sock, struct meta_struct *metastruct)
+void send_UDP_pack(struct meta_struct *metastruct)
 {
-		if(sendto(sock, &metastruct->tosend_UDP_pack,sizeof(metastruct->tosend_UDP_pack)+1,0, 
-	    (struct sockaddr*) &metastruct->addr_server, sizeof(metastruct->addr_server)) < 0)
+		if(sendto(metastruct->sock, &metastruct->tosend_UDP_pack,
+			sizeof(metastruct->tosend_UDP_pack)+1,0, 
+			(struct sockaddr*) &metastruct->addr_server, sizeof(metastruct->addr_server)) < 0)
 		{
 			perror("Error al enviar el paquet");
 			exit(-1);
@@ -283,28 +288,29 @@ void send_UDP_pack(int sock, struct meta_struct *metastruct)
 /* Fills the client address struct for the binding, binds, Gets the IP of the host by its name */
 /* TODO: mirar si es pot fer al principi, quan s'inicialitzen les structs */
 /* TODO: mirar si fer memset */
-void fill_structures_and_send(int sock, struct meta_struct *metastruct)
+void fill_structures_and_send(struct cfg_data dataconfig, struct hostent *ent, 
+							  struct meta_struct *metastruct)
 {
         metastruct->addr_cli.sin_family = AF_INET;
         metastruct->addr_cli.sin_addr.s_addr = htonl(INADDR_ANY);
         metastruct->addr_cli.sin_port = htons(0);
-        if(bind(sock, (struct sockaddr *)&metastruct->addr_cli,
+        if(bind(metastruct->sock, (struct sockaddr *)&metastruct->addr_cli,
                        sizeof(struct sockaddr_in))<0)
         {
                 perror("Error amb el binding del socket:");
                 exit(-1);
         }
 
-        metastruct->ent = gethostbyname(metastruct->dataconfig.nom_server);
+        ent = gethostbyname(dataconfig.nom_server);
 		
         metastruct->addr_server.sin_family = AF_INET;
-        metastruct->addr_server.sin_addr.s_addr = (((struct in_addr *)metastruct->ent->h_addr)
+        metastruct->addr_server.sin_addr.s_addr = (((struct in_addr *)ent->h_addr)
                                         ->s_addr);
-        metastruct->addr_server.sin_port = htons(metastruct->dataconfig.port_server);
+        metastruct->addr_server.sin_port = htons(dataconfig.port_server);
 
         metastruct->tosend_UDP_pack.tipus_paquet = 0x00;
-        strcpy(metastruct->tosend_UDP_pack.nom_equip,metastruct->dataconfig.nom_equip);
-        strcpy(metastruct->tosend_UDP_pack.MAC_addr,metastruct->dataconfig.MAC_equip);
+        strcpy(metastruct->tosend_UDP_pack.nom_equip,dataconfig.nom_equip);
+        strcpy(metastruct->tosend_UDP_pack.MAC_addr,dataconfig.MAC_equip);
         strcpy(metastruct->tosend_UDP_pack.num_aleatori,"000000");
         strcpy(metastruct->tosend_UDP_pack.dades,"");
 }
