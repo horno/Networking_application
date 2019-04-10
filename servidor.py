@@ -51,8 +51,7 @@ if __name__ == '__main__':
     UDP_PORT = int(server_cfg['UDP-port'])
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((UDP_IP, UDP_PORT))
+    sock.bind(('', UDP_PORT))
 
-    while True:
-        data, addr = sock.recvfrom(1024) #buffer lengths
-        print(data)
+    data, addr = sock.recvfrom(1024) #buffer lengths
+    print(data)
