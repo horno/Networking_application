@@ -1,5 +1,6 @@
 import argparse
 import socket
+import threading
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Server side of a client-server communication')
@@ -42,6 +43,14 @@ def extract_equips_dat():
         line = f.readline()
     return equips_dat
 
+def threading_test_1():
+    while True:
+        print("Thread 1!")
+
+def threading_test_2():
+    while True:
+        print("Thread 2!")
+
 if __name__ == '__main__':
     args = parse_arguments()
     server_cfg = extract_cfg_data()
@@ -52,6 +61,8 @@ if __name__ == '__main__':
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(('', UDP_PORT))
-
-    data, addr = sock.recvfrom(1024) #buffer lengths
-    print(data)
+    # while True:
+        # data, addr = sock.recvfrom(1024) #buffer lengths
+        # print(data)    
+    thread_1 = threading.Thread(target=threading_test_1)
+    thread_2 = threading.Thread(target=threading_test_2)
