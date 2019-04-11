@@ -2,11 +2,9 @@ import argparse
 import socket
 import threading
 import struct
+from ctypes import Structure 
 
-th1 = False
-th2 = False
-th3 = False
-
+#encoding: utf-8
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Server side of a client-server communication')
@@ -65,19 +63,12 @@ def debugger(debug_text):
     if args.d:
         print("Debugger -> "+debug_text)
 
-def attend(data, addr, th):
-    print(data)
+def attend(data, addr):
+    # print(len(chunk))
+    data = struct.unpack("B7s13s7s50s", data)
+    print(data[4])
+    print(data[4].split('\0'))
 
-
-    if th == '1':
-        global th1 
-        th1 = False
-    elif th == '2':
-        global th2
-        th2 = False
-    else:
-        global th3
-        th3 = False
 
 if __name__ == '__main__':
     args = parse_arguments()
@@ -95,17 +86,7 @@ if __name__ == '__main__':
     try:
         while True:
             data, addr = sock.recvfrom(78) #buffer lengths
-            if th1 == False:
-                th1 = True
-                thread_1 = threading.Thread(target = attend, args=(data, addr, '1'))
-                thread_1.start()
-            elif th2 == False:
-                th2  = True
-                thread_2 = threading.Thread(target = attend, args = (data, addr, '2'))
-                thread_2.start()
-            elif th3 == False:
-                th3 = True
-                thread_3 = threading.Thread(target = attend, args = (data, addr, '3'))
-                thread_3.start()
+            attend(data,addr)
+            
     finally:
         sock.close()

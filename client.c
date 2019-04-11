@@ -343,7 +343,7 @@ struct cfg_data collect_config_data(char cfg_file[])
         while(fgets(singleLine,100,fpointer) != NULL)
         {
                 cfg_param = strtok(singleLine," ");             
-                if(strcmp(cfg_param,"nom") == 0)
+                if(strcmp(cfg_param,"Nom") == 0)
                 {
                         strcpy(dataconfig.nom_equip, strtok(NULL,"\n"));
 	       	}
