@@ -66,8 +66,7 @@ def debugger(debug_text):
         print("Debugger -> "+debug_text)
 
 def attend(data, addr, th):
-    print(data)
-    print(struct.unpack('dicccc',data)) 
+    # print(data)
 
 
     if th == '1':
