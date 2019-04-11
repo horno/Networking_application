@@ -1,25 +1,36 @@
+import argparse
+import socket
 import threading
-import multiprocessing
-import time
+import time 
 
+th1 = False
+th2 = False
+th3 = False
 
-def threading_test_1():
-    for i in range(5):
-        print(str(i) + "Thread 1!")
+def test_th(th):
+    for i in range(8):
+        print("Thread:" + str(i))
         time.sleep(1)
-    return "1- Is this gonna arrive?"
-
-def threading_test_2():
-    for i in range(10):
-        print(str(i) + "Thread 2!")
-        time.sleep(1)
-    return "2- Is this gonna arrive?"
+    if th == "1":
+         print("Thread 1 finnished")
+         
+    elif th == "2":
+         print("Thread 2 finnished")
+    elif th == "3":
+         print("Thread 3 finnished")
 
 if __name__ == '__main__':
-    thread_1 = multiprocessing.Process(target=threading_test_1)
-    thread_2 = multiprocessing.Process(target=threading_test_2)
-    thread_1.start()    
-    thread_2.start()
-    thread_1.join()
-    # thread_2.join()
-    print("PROGRAM END")
+    while True:
+        #data, addr = sock.recvfrom(1024) #buffer lengths
+        if th1 == False:
+            th1 = True
+            thread_1 = threading.Thread(target = test_th, args=("1"))
+            thread_1.start()
+        elif th2 == False:
+            th2  = True
+            thread_2 = threading.Thread(target = test_th, args=("2"))
+            thread_2.start()
+        elif th3 == False:
+            th3 = True
+            thread_3 = threading.Thread(target = test_th, args=("3"))
+            thread_3.start()
