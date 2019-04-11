@@ -66,7 +66,7 @@ def debugger(debug_text):
         print("Debugger -> "+debug_text)
 
 def attend(data, addr, th):
-    # print(data)
+    print(data)
 
 
     if th == '1':
@@ -89,22 +89,23 @@ if __name__ == '__main__':
     debugger("Socket UDP obert")
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((UDP_IP, UDP_PORT))
+    sock.bind(("", UDP_PORT))
     
     debugger("Inici de bucle de servei infinit")
-    while True:
-        data, addr = sock.recvfrom(1024) #buffer lengths
-        if th1 == False:
-            th1 = True
-            thread_1 = threading.Thread(target = attend, args=(data, addr, '1'))
-            thread_1.start()
-        elif th2 == False:
-            th2  = True
-            thread_2 = threading.Thread(target = attend, args = (data, addr, '2'))
-            thread_2.start()
-        elif th3 == False:
-            th3 = True
-            thread_3 = threading.Thread(target = attend, args = (data, addr, '3'))
-            thread_3.start()
-
-    sock.close()
+    try:
+        while True:
+            data, addr = sock.recvfrom(78) #buffer lengths
+            if th1 == False:
+                th1 = True
+                thread_1 = threading.Thread(target = attend, args=(data, addr, '1'))
+                thread_1.start()
+            elif th2 == False:
+                th2  = True
+                thread_2 = threading.Thread(target = attend, args = (data, addr, '2'))
+                thread_2.start()
+            elif th3 == False:
+                th3 = True
+                thread_3 = threading.Thread(target = attend, args = (data, addr, '3'))
+                thread_3.start()
+    finally:
+        sock.close()
