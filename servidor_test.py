@@ -116,12 +116,9 @@ if __name__ == '__main__':
 # import socket
 # import threading
 # import struct
-# import sys
+# from ctypes import * 
 
-# th1 = False
-# th2 = False
-# th3 = False
-
+# #encoding: utf-8
 
 # def parse_arguments():
 #     parser = argparse.ArgumentParser(description='Server side of a client-server communication')
@@ -129,6 +126,15 @@ if __name__ == '__main__':
 #     parser.add_argument('-d', help = 'Activates the debugger flag', action = "store_true")
 #     args = parser.parse_args()
 #     return args
+
+# class client:
+#     estat = ""
+#     aleatori = ""
+#     ip = ""
+
+#     def __init__(self, nom, MAC):
+#         self.nom = nom
+#         self.mac = MAC
 
 # def extract_cfg_data():
 #     server_cfg = {'Nom': '', 'MAC': '', 'UDP-port': '', 'TCP-port': ''}
@@ -171,6 +177,33 @@ if __name__ == '__main__':
 #     if args.d:
 #         print("Debugger -> "+debug_text)
 
+# class PDU(Structure):
+#     _fields_ = [
+#         ('t', c_ubyte),
+#         ('n', c_char*7),
+#         ('m', c_char*13),
+#         ('a', c_char*7),
+#         ('d', c_char*50)
+#     ]
+
+
+# def attend(data, addr, sock):
+#     p = PDU.from_buffer_copy(data)
+#     print(p.t)
+#     print(p.n)
+#     print(p.m)
+#     print(p.a)
+#     print(p.d)
+
+#     dat = byref(p)
+#     # p = PDU(n = c_char_p('a'))
+#     p = PDU(t = 1)
+#     p = PDU(d = 'no tindra el puto quim una tita super petita')
+
+#     # print(p.n)
+#     sock.sendto(p,addr)
+
+
 # if __name__ == '__main__':
 #     args = parse_arguments()
 #     server_cfg = extract_cfg_data()
@@ -184,15 +217,10 @@ if __name__ == '__main__':
 #     sock.bind(("", UDP_PORT))
     
 #     debugger("Inici de bucle de servei infinit")
-
+#     # try:
+#     #     while True:
 #     data, addr = sock.recvfrom(78) #buffer lengths
-    
-
-#     chunk = data[:78]
-#     print(len(chunk))
-#     # print(chunk)
-#     chunk = struct.unpack("B7s13s7s50s", chunk)
-#     print(chunk)    
-#     print(chunk[3])
-#     # print(addr)
-#     sock.close()
+#     attend(data,addr, sock)
+            
+#     # finally:
+#     #     sock.close()

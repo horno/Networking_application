@@ -2,7 +2,7 @@ import argparse
 import socket
 import threading
 import struct
-from ctypes import Structure 
+from ctypes import * 
 
 #encoding: utf-8
 
@@ -63,11 +63,24 @@ def debugger(debug_text):
     if args.d:
         print("Debugger -> "+debug_text)
 
-def attend(data, addr):
-    # print(len(chunk))
-    data = struct.unpack("B7s13s7s50s", data)
-    print(data[4])
-    print(data[4].split('\0'))
+class PDU(Structure):
+    _fields_ = [
+        ('tipus', c_ubyte),
+        ('nom', c_char*7),
+        ('MAC', c_char*13),
+        ('aleatori', c_char*7),
+        ('dades', c_char*50)
+    ]
+
+
+def attend(data, addr, sock):
+    p = PDU.from_buffer_copy(data)
+    
+
+    p = PDU(t = 1)
+    p = PDU(d = '')
+
+    sock.sendto(p,addr)
 
 
 if __name__ == '__main__':
@@ -83,10 +96,10 @@ if __name__ == '__main__':
     sock.bind(("", UDP_PORT))
     
     debugger("Inici de bucle de servei infinit")
-    try:
-        while True:
-            data, addr = sock.recvfrom(78) #buffer lengths
-            attend(data,addr)
+    # try:
+    #     while True:
+    data, addr = sock.recvfrom(78) #buffer lengths
+    attend(data,addr, sock)
             
-    finally:
-        sock.close()
+    # finally:
+    #     sock.close()
