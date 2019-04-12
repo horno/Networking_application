@@ -4,8 +4,13 @@ import socket
 import threading
 import struct
 import random
+import time
 from ctypes import *
 
+global equips_dat
+j = 2
+k = 3
+r = 3
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Server side of a client-server communication')
@@ -13,15 +18,6 @@ def parse_arguments():
     parser.add_argument('-d', help = 'Activates the debugger flag', action = "store_true")
     args = parser.parse_args()
     return args
-
-class client:
-    estat = ""
-    aleatori = ""
-    ip = ""
-
-    def __init__(self, nom, MAC):
-        self.nom = nom
-        self.mac = MAC
 
 def extract_cfg_data():
     server_cfg = {'Nom': '', 'MAC': '', 'UDP-port': '', 'TCP-port': ''}
@@ -111,6 +107,8 @@ def check_state(addr, sock, p, equip_dat):
                 actualize_equips(p.nom, 'estat', 'REGISTERED')  
                 debugger(p.nom + ' passa a estat REGISTERED')
                 correct_data(addr, sock, p ,equip_dat)
+                actualize_equips(p.nom, 'TTL', 0)
+                threading.Thread(target = ttl_register, args=(equip_dat['nom'],)).start()
         else:
             message = 'Mac no concorda o nombre aleatori no a zeros'
             debugger('Petició de registre de ' + p.nom + ' denegada per:' + message)
@@ -132,6 +130,10 @@ def actualize_equips(name, key, value):
         if i['nom'] == name:
             i[key] = value            
 
+def checkout_equips(name, key):
+    for i in equips_dat:
+        if i['nom'] == name:
+            return i[key]
 
 def register_petition(addr, sock, p):
     auth, equip_dat = authorised(p)
@@ -148,11 +150,63 @@ def attend(data, addr, sock):
     if p.tipus == 0:
         debugger('Rebuda petició de registre de ' + p.nom)
         register_petition(addr, sock, p)
+    elif p.tipus == 0x10:
+        debugger('Rebut alive inf de ' + p.nom)
+        alive_inf(addr, sock, p)
 
+def ttl_register(name):
+    debugger('Comença temporitzacio de REGISTER de '+name)
+    actualize_equips(name, 'TTL', 2)    
+    for i in range(j):
+        time.sleep(r)
+    ttl = checkout_equips(name, 'TTL') - j
+    actualize_equips(name, 'TTL', ttl)
+    if ttl == 0:
+        debugger(name + ' passa a estat DISCONNECTED')
+        actualize_equips(name, 'estat', 'DISCONNECTED')
+
+def ttl_alive(name):
+    debugger('Comença temporitzacio ALIVE de '+name)
+    actualize_equips(name, 'TTL', checkout_equips(name, 'TTL')+k)
+    for i in range(k):
+        time.sleep(r)
+    ttl = checkout_equips(name, 'TTL') - k
+    actualize_equips(name, 'TTL', ttl)
+    if ttl == 0:
+        debugger(name + ' passa a estat DISCONNECTED')
+        actualize_equips(name, 'estat', 'DISCONNECTED')
+
+def alive_inf(addr, sock, p):
+    auth,equip_dat = authorised(p)
+    if (auth and (equip_dat['estat'] == 'ALIVE' or  equip_dat['estat'] == 'REGISTERED')
+    and equip_dat['MAC'] == p.MAC and addr[0] == equip_dat['ip'] and 
+    p.aleatori == equip_dat['aleatori'] ):
+        alive_ack_pdu = PDU(tipus=0x011, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=equip_dat['aleatori'], dades='')
+        sock.sendto(alive_ack_pdu, addr)
+        if equip_dat['estat'] == 'REGISTERED':
+            actualize_equips(p.nom, 'estat', 'ALIVE')
+            debugger(p.nom + ' passa a estat ALIVE')
+        threading.Thread(target = ttl_alive, args=(equip_dat['nom'],)).start()
+    elif  not auth  or (equip_dat['estat'] != 'ALIVE' and  equip_dat['estat'] != 'REGISTERED'):
+        message = 'Equip no autoritzat o no registrat'
+        debugger('Alive_inf de '+p.nom+' rebutjat:' + message)
+        alive_rej_pdu = PDU(tipus=0x013, nom='', MAC='', aleatori='', dades=message)
+        sock.sendto(alive_rej_pdu, addr)
+    elif addr[0] != equip_dat['ip'] or p.aleatori != equip_dat['aleatori']:
+        message = 'Nombre aleatori o ip no concorden'
+        debugger('Alive_inf de '+p.nom+' denegat:' + message)
+        alive_nack_pdu = PDU(tipus=0x012, nom='', MAC='', aleatori='', dades=message)
+        sock.sendto(alive_nack_pdu, addr)
+    else:
+        message = 'Paquet amb format incorrecte'
+        debugger(message)
+        err_pdu = PDU(tipus=0x09, nom='', MAC='', aleatori='', dades=message)
+        sock.sendto(err_pdu, addr)
 
 if __name__ == '__main__':
     args = parse_arguments()
     server_cfg = extract_cfg_data()
+    global equips_dat
     equips_dat = extract_equips_dat()
 
     UDP_IP = '127.0.0.1'
