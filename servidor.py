@@ -125,9 +125,6 @@ def check_state(addr, sock, p, equip_dat):
             message = 'IP, aleatori o MAC no concorden'
             debugger('Petició de registre de ' + p.nom + ' denegada per:' + message)            
             nack_pdu_send(addr, sock, message)
-            equip_dat['estat']='DISCONNECTED'
-            actualize_equips(p.nom, 'estat', 'DISCONNECTED')
-            debugger(p.nom + ' passa a estat DISCONNECTED')
     return equip_dat
 
 def actualize_equips(name, key, value):
