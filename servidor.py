@@ -2,7 +2,8 @@ import argparse
 import socket
 import threading
 import struct
-from ctypes import * 
+import random
+from ctypes import *
 
 #encoding: utf-8
 
@@ -53,7 +54,7 @@ def extract_equips_dat():
     line = f.readline()
     while line:
         words = line.split()
-        equips_dat.append({'Nom':words[0], 'MAC':words[1]})
+        equips_dat.append({'nom':words[0], 'MAC':words[1], 'estat': "DISCONNECTED"})
         line = f.readline()
         i = i +1
     f.close()
@@ -72,15 +73,71 @@ class PDU(Structure):
         ('dades', c_char*50)
     ]
 
+def authorised(p):
+    for i in equips_dat:
+        if i['nom'] == p.nom:
+            return True, i
+        else:
+            return False, i
+
+def nack_pdu_send(addr, sock):
+    nack_pdu = PDU(tipus=0x02, nom='', MAC='', aleatori='', dades='Paquet rebutjat per dades incorrectes')
+    sock.sendto(nack_pdu, addr)
+
+def correct_data(addr, sock, p, equip_dat):
+    rand = random.randint(1000001,1999999)
+    rand = str(rand)[1:]
+    ack_pdu = PDU(tipus=0x01, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=rand, dades='9000')
+    sock.sendto(ack_pdu, addr)
+    actualize_equips(p.nom, 'aleatori', rand)
+
+
+def check_state(addr, sock, p, equip_dat):
+    if equip_dat['estat'] == 'DISCONNECTED':
+        if p.MAC == equip_dat['MAC'] and p.aleatori == '000000':
+            if 'ip' in equip_dat:
+                if addr[0] == equip_dat['ip']:
+                    correct_data(addr, sock, p, equip_dat)
+                    equip_dat['estat'] = 'REGISTERED'
+                    actualize_equips(p.nom, 'estat', 'REGISTERED')
+
+                else:
+                    nack_pdu_send(addr, sock)
+            else:
+                equip_dat['ip'] = addr[0]
+                actualize_equips(p.nom, 'ip', addr[0])                
+                correct_data(addr, sock, p ,equip_dat)
+        else:
+            nack_pdu_send(addr, sock)
+    else:
+        if p.MAC == equip_dat['MAC'] and p.aleatori == equip_dat['aleatori'] and addr[0] == equip_dat['ip']:
+            ack_pdu = PDU(tipus=0x01, nom='', MAC='', aleatori='', dades=equip_dat.aleatori)
+            sock.sendto(ack_pdu, addr)
+        else:
+            nack_pdu_send(addr, sock)
+            equip_dat['estat']='DISCONNECTED'
+            actualize_equips(p.nom, 'estat', 'DISCONNECTED')
+    return equip_dat
+
+def actualize_equips(name, key, value):
+    for i in equips_dat:
+        if i['nom'] == name:
+            i[key] = value            
+
+
+def register_petition(addr, sock, p):
+    auth, equip_dat = authorised(p)
+    if auth:
+        check_state(addr, sock, p, equip_dat)
+    else:
+        rej_pdu = PDU(tipus=0x03, nom='', MAC='', aleatori='', dades='Equip no autoritzat')
+        sock.sendto(rej_pdu, addr)
+    
 
 def attend(data, addr, sock):
     p = PDU.from_buffer_copy(data)
-    
-
-    p = PDU(t = 1)
-    p = PDU(d = '')
-
-    sock.sendto(p,addr)
+    if p.tipus == 0:
+        register_petition(addr, sock, p)
 
 
 if __name__ == '__main__':
@@ -91,15 +148,15 @@ if __name__ == '__main__':
     UDP_IP = '127.0.0.1'
     UDP_PORT = int(server_cfg['UDP-port'])
     debugger("Socket UDP obert")
-    
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("", UDP_PORT))
-    
+
     debugger("Inici de bucle de servei infinit")
-    # try:
-    #     while True:
-    data, addr = sock.recvfrom(78) #buffer lengths
-    attend(data,addr, sock)
-            
-    # finally:
-    #     sock.close()
+    try:
+         while True:
+            data, addr = sock.recvfrom(78)
+            attend(data,addr, sock)
+
+    finally:
+        sock.close()
