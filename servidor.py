@@ -1,3 +1,4 @@
+# coding=utf-8
 import argparse
 import socket
 import threading
@@ -5,7 +6,6 @@ import struct
 import random
 from ctypes import *
 
-#encoding: utf-8
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Server side of a client-server communication')
@@ -80,8 +80,8 @@ def authorised(p):
         else:
             return False, i
 
-def nack_pdu_send(addr, sock):
-    nack_pdu = PDU(tipus=0x02, nom='', MAC='', aleatori='', dades='Paquet rebutjat per dades incorrectes')
+def nack_pdu_send(addr, sock, message):
+    nack_pdu = PDU(tipus=0x02, nom='', MAC='', aleatori='', dades= message)
     sock.sendto(nack_pdu, addr)
 
 def correct_data(addr, sock, p, equip_dat):
@@ -100,23 +100,34 @@ def check_state(addr, sock, p, equip_dat):
                     correct_data(addr, sock, p, equip_dat)
                     equip_dat['estat'] = 'REGISTERED'
                     actualize_equips(p.nom, 'estat', 'REGISTERED')
-
+                    debugger(p.nom + ' passa a estat REGISTERED')
                 else:
-                    nack_pdu_send(addr, sock)
+                    message = 'Ip del primer missatge no concorda'
+                    debugger('Petició de registre de ' + equip_dat['nom'] + ' denegada per:' + message)
+                    nack_pdu_send(addr, sock, message)
             else:
                 equip_dat['ip'] = addr[0]
-                actualize_equips(p.nom, 'ip', addr[0])                
+                actualize_equips(p.nom, 'ip', addr[0])
+                actualize_equips(p.nom, 'estat', 'REGISTERED')  
+                debugger(p.nom + ' passa a estat REGISTERED')
                 correct_data(addr, sock, p ,equip_dat)
         else:
-            nack_pdu_send(addr, sock)
+            message = 'Mac no concorda o nombre aleatori no a zeros'
+            debugger('Petició de registre de ' + p.nom + ' denegada per:' + message)
+            nack_pdu_send(addr, sock, message)
     else:
-        if p.MAC == equip_dat['MAC'] and p.aleatori == equip_dat['aleatori'] and addr[0] == equip_dat['ip']:
-            ack_pdu = PDU(tipus=0x01, nom='', MAC='', aleatori='', dades=equip_dat.aleatori)
+        if p.MAC == equip_dat['MAC']  and addr[0] == equip_dat['ip']:
+            ack_pdu = PDU(tipus=0x01, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=equip_dat['aleatori'], dades='9000')
             sock.sendto(ack_pdu, addr)
+            debugger(p.nom + ' segueeix en estat ' + equip_dat['estat'])
+
         else:
-            nack_pdu_send(addr, sock)
+            message = 'IP, aleatori o MAC no concorden'
+            debugger('Petició de registre de ' + p.nom + ' denegada per:' + message)            
+            nack_pdu_send(addr, sock, message)
             equip_dat['estat']='DISCONNECTED'
             actualize_equips(p.nom, 'estat', 'DISCONNECTED')
+            debugger(p.nom + ' passa a estat DISCONNECTED')
     return equip_dat
 
 def actualize_equips(name, key, value):
@@ -130,6 +141,7 @@ def register_petition(addr, sock, p):
     if auth:
         check_state(addr, sock, p, equip_dat)
     else:
+        debugger('Petició de registre de ' + equip_dat['nom'] + ' rebutjada, equip no autoritat')
         rej_pdu = PDU(tipus=0x03, nom='', MAC='', aleatori='', dades='Equip no autoritzat')
         sock.sendto(rej_pdu, addr)
     
@@ -137,6 +149,7 @@ def register_petition(addr, sock, p):
 def attend(data, addr, sock):
     p = PDU.from_buffer_copy(data)
     if p.tipus == 0:
+        debugger('Rebuda petició de registre de ' + p.nom)
         register_petition(addr, sock, p)
 
 
@@ -157,6 +170,5 @@ if __name__ == '__main__':
          while True:
             data, addr = sock.recvfrom(78)
             attend(data,addr, sock)
-
     finally:
         sock.close()
