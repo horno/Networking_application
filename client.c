@@ -12,6 +12,8 @@
 #include <signal.h>
 #include <getopt.h>
 
+#include <errno.h>
+
 
 #define h_addr h_addr_list[0] /* Backward compatibility */
 
@@ -60,11 +62,11 @@ int UDP_answer_treatment(int debug, struct PDU_package recv_reg_UDP);
 void debugger(int debug, char message[]);
 int select_process(int debug, fd_set fdset, struct timeval timeout,
                      struct meta_struct *metastruct);
-void alive(int debug ,struct meta_struct *metastruct);
+void alive(int debug ,struct meta_struct *metastruct, int fdcons[2]);
 int authenticate_alive(int debug, struct PDU_package register_pack, struct PDU_package alive_pack);
 void console(int debug);
-void fork_console(int debug, int fd[2]);
-void check_console_command(int sock);
+void fork_console(int debug, int fdcons[2]);
+void check_console_command(int sock, int fdcons[2]);
 
 
 
@@ -75,7 +77,7 @@ int main(int argc, char *argv[])
 	char *cfg_file = "client.cfg";
 	int debug = 0;
 	int option;
-	int fd[2];
+	int fdcons[2];
 
     struct meta_struct metastruct;
 	struct cfg_data dataconfig;
@@ -105,7 +107,6 @@ int main(int argc, char *argv[])
 	dataconfig = collect_config_data(cfg_file);
 	strcpy(metastruct.tosend_UDP_pack.nom_equip,dataconfig.nom_equip); 
 
-	fork_console(debug, fd);
 
 	debugger(debug, "Opening UDP socket");
 	/* Opens UDP socket */
@@ -118,25 +119,24 @@ int main(int argc, char *argv[])
 	fill_structures_and_send(dataconfig, ent, &metastruct);	
 
 	while(1){
-		check_console_command(metastruct.sock);
 		register_req(debug, &metastruct);
-		alive(debug, &metastruct);
+		alive(debug, &metastruct, fdcons);
 	}
 
 }
 
-void check_console_command(int sock)
+void check_console_command(int sock, int fdcons[2])
 {
 	char word[5];
 	fd_set fdset;
 	struct timeval timeout;
 	
 	FD_ZERO(&fdset);
-    FD_SET(0, &fdset);
+    FD_SET(fdcons[0], &fdset);
 	timeout.tv_usec = 0;
 	timeout.tv_sec = 0;
     if(select(8, &fdset, NULL, NULL, &timeout) != 0){
-		fgets(word, 5, stdin);
+		read(fdcons[0], word, sizeof(word));
 		/*fprintf(stderr,"WORD: %s\n",word);*/
 		if(strcmp(word,"quit") == 0){
 			wait(NULL);
@@ -146,24 +146,22 @@ void check_console_command(int sock)
 	}
 }
 
-void fork_console(int debug, int fd[2])
+void fork_console(int debug, int fdcons[2])
 {
 	pid_t pid;
-	if(pipe(fd) == -1){
+	if(pipe(fdcons) == -1){
 		debugger(debug, "Pipe error"); 
 		exit(1);
 	}
 	pid = fork();
 	if (pid == 0){
-		close(fd[0]);
-		dup2(fd[1], 1);
-		close(fd[1]);
+		close(fdcons[0]);
+		dup2(fdcons[1], 1);
+		close(fdcons[1]);
 		console(debug);
 	
 	}else if(pid != -1){
-		close(fd[1]);
-		dup2(fd[0],0);
-		close(fd[0]);
+		close(fdcons[1]);
 	}else{
 		perror("Error amb el fork del procés de la consola");
 		exit(1);
@@ -176,6 +174,12 @@ void console(int debug)
 	while(quit == 0){
 		fprintf(stderr,">");
 		fgets(word, sizeof(word), stdin);
+		
+		if (write(1, "pipetest", strlen("pipetest")) == -1){
+			if(errno = EPIPE){
+				exit(1);
+			}
+		}
 		if(strcmp(word,"quit") == 0){
 			quit = 1;
 			write(1, word, strlen(word)+1);
@@ -187,20 +191,20 @@ void console(int debug)
 	exit(1);
 }
 
-void alive(int debug, struct meta_struct *metastruct)
+void alive(int debug, struct meta_struct *metastruct, int fdcons[2])
 {
 	int i = 0;
+	int first = 1;
 	fd_set fdset;
 	struct timeval timeout;
 	struct PDU_package recv_alive_UDP;
-	debugger(debug, "Estat: ALIVE");
 	metastruct->tosend_UDP_pack.tipus_paquet = 0x10;
 	strcpy(metastruct->tosend_UDP_pack.num_aleatori,
 					metastruct->recv_reg_UDP.num_aleatori);
 	while(i < u){
-		check_console_command(metastruct->sock);
 		debugger(debug, "Enviat ALIVE_INF");
 		send_UDP_pack(debug, metastruct);
+		check_console_command(metastruct->sock,fdcons);
 		sleep(r);
 		
     	FD_ZERO(&fdset);
@@ -215,6 +219,11 @@ void alive(int debug, struct meta_struct *metastruct)
 			if(UDP_answer_treatment(debug, recv_alive_UDP) == 1 &&
 			   authenticate_alive(debug, metastruct->recv_reg_UDP,recv_alive_UDP) == 0){
 				i = 0;
+				if(first == 1){
+					debugger(debug, "ESTAT: ALIVE");
+					fork_console(debug, fdcons);
+				}
+				first = 0;
 			}else if(UDP_answer_treatment(debug, recv_alive_UDP) == 2 &&
 					 authenticate_alive(debug, metastruct->recv_reg_UDP,recv_alive_UDP) == 0){
 				i = u;				
@@ -223,6 +232,7 @@ void alive(int debug, struct meta_struct *metastruct)
 			}
 		}
 	}
+	close(fdcons[0]);
 }
 int authenticate_alive(int debug,struct PDU_package register_pack, struct PDU_package alive_pack)
 {
@@ -294,7 +304,6 @@ int select_process(int debug, fd_set fdset, struct timeval timeout,
     if(select(8, &fdset, NULL, NULL, &timeout) == 0){
 			send_UDP_pack(debug, metastruct);
 			debugger(debug, "Enviat REGISTER_REQ");
-			check_console_command(metastruct->sock);
 	}else{
 			debugger(debug, "Rebuda resposta a REGISTER_REQ");
 			metastruct->recv_reg_UDP =  recvfrom_UDP(metastruct->sock);
@@ -323,6 +332,7 @@ int UDP_answer_treatment(int debug, struct PDU_package recv_reg_UDP) /*TODO: can
 		exit(-2);
 	}else if(recv_reg_UDP.tipus_paquet == 0x11){
 		debugger(debug, "Paquet rebut, ALIVE_ACK");
+		debugger(debug, "Estat: ALIVE");
 		return 1;
 	}else if(recv_reg_UDP.tipus_paquet == 0x12){
 		debugger(debug, "Paquet rebut, ALIVE_NACK");
