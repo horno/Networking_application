@@ -5,9 +5,12 @@ import threading
 import struct
 import random
 import time
+import sys
+import os
 from ctypes import *
 
 global equips_dat
+quit = False
 j = 2
 k = 3
 r = 3
@@ -72,9 +75,7 @@ class PDU(Structure):
 def authorised(p):
     for i in equips_dat:
         if i['nom'] == p.nom:
-            return True, i
-        else:
-            return False, i
+            return True, i    
 
 def nack_pdu_send(addr, sock, message):
     nack_pdu = PDU(tipus=0x02, nom='', MAC='', aleatori='', dades= message)
@@ -140,7 +141,7 @@ def register_petition(addr, sock, p):
     if auth:
         check_state(addr, sock, p, equip_dat)
     else:
-        debugger('Petició de registre de ' + equip_dat['nom'] + ' rebutjada, equip no autoritat')
+        debugger('Petició de registre de ' + p.nom + ' rebutjada, equip no autoritat')
         rej_pdu = PDU(tipus=0x03, nom='', MAC='', aleatori='', dades='Equip no autoritzat')
         sock.sendto(rej_pdu, addr)
     
@@ -203,12 +204,35 @@ def alive_inf(addr, sock, p):
         err_pdu = PDU(tipus=0x09, nom='', MAC='', aleatori='', dades=message)
         sock.sendto(err_pdu, addr)
 
+def console():
+    quit = False
+    debugger('Terminal activa')
+    while not quit:
+        line = sys.stdin.readline()
+        word = line.split()
+        if(word != [] and word[0] == 'quit'):
+            quit = True
+        elif word != [] and word[0] == 'list':
+            cp=('-NOM-','-MAC-','-ESTAT-','-IP-','-ALEATORI-')
+            print ('{0:>0} {1:>10} {2:>16} {3:>11} {4:<10}'.format(*cp))
+            for i in equips_dat:
+                if i['estat'] == 'REGISTERED' or i['estat'] == 'ALIVE':
+                    cp = (i['nom'],i['MAC'],i['estat'],i['ip'],i['aleatori'])
+                    print ('{0:>0} {1:>14} {2:>14} {3:>11} {4:<10}'.format(*cp))
+                elif i['estat'] == 'DISCONNECTED':
+                    cp = (i['nom'],i['MAC'],i['estat'])
+                    print ('{0:>0} {1:>14} {2:>14}'.format(*cp))
+        else:
+            debugger('Comanda incorrecta')
+
+    os._exit(1)
+
 if __name__ == '__main__':
     args = parse_arguments()
     server_cfg = extract_cfg_data()
     global equips_dat
     equips_dat = extract_equips_dat()
-
+    threading.Thread(target=console).start()
     UDP_IP = '127.0.0.1'
     UDP_PORT = int(server_cfg['UDP-port'])
     debugger("Socket UDP obert")
