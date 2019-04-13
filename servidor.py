@@ -214,11 +214,11 @@ def console():
             quit = True
         elif word != [] and word[0] == 'list':
             cp=('-NOM-','-MAC-','-ESTAT-','-IP-','-ALEATORI-')
-            print ('{0:>0} {1:>10} {2:>16} {3:>11} {4:<10}'.format(*cp))
+            print ('{0:>0} {1:>10} {2:>16} {3:>11} {4:>13}'.format(*cp))
             for i in equips_dat:
                 if i['estat'] == 'REGISTERED' or i['estat'] == 'ALIVE':
                     cp = (i['nom'],i['MAC'],i['estat'],i['ip'],i['aleatori'])
-                    print ('{0:>0} {1:>14} {2:>14} {3:>11} {4:<10}'.format(*cp))
+                    print ('{0:>0} {1:>14} {2:>14} {3:>11} {4:>8}'.format(*cp))
                 elif i['estat'] == 'DISCONNECTED':
                     cp = (i['nom'],i['MAC'],i['estat'])
                     print ('{0:>0} {1:>14} {2:>14}'.format(*cp))
