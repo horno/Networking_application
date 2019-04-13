@@ -10,6 +10,7 @@
 
 #include <string.h>
 #include <signal.h>
+#include <getopt.h>
 
 
 #define h_addr h_addr_list[0] /* Backward compatibility */
@@ -50,7 +51,7 @@ struct cfg_data collect_config_data(char cfg_file[]);
 char* change_cfg_filename(int argc, char *argv[]);
 void fill_structures_and_send(struct cfg_data dataconfig, struct hostent *ent, 
 							  struct meta_struct *metastruct);
-void send_UDP_pack(struct meta_struct *metastruct);
+void send_UDP_pack(int debug, struct meta_struct *metastruct);
 struct PDU_package recvfrom_UDP(int sock);
 void register_req(int debug,struct meta_struct *metastruct);
 int register_process(fd_set fdset, struct timeval timeout, int debug,
@@ -63,7 +64,7 @@ void alive(int debug ,struct meta_struct *metastruct);
 int authenticate_alive(int debug, struct PDU_package register_pack, struct PDU_package alive_pack);
 void console(int debug);
 void fork_console(int debug, int fd[2]);
-void check_console_command();
+void check_console_command(int sock);
 
 
 
@@ -73,6 +74,7 @@ int main(int argc, char *argv[])
 {
 	char *cfg_file = "client.cfg";
 	int debug = 0;
+	int option;
 	int fd[2];
 
     struct meta_struct metastruct;
@@ -81,17 +83,23 @@ int main(int argc, char *argv[])
     ent = malloc(sizeof(ent));
 
     memset(&metastruct,0,sizeof (struct meta_struct));
-	if(argc > 1)
-	{
-		if(strcmp(argv[1],"-c") == 0)
+
+	while((option = getopt(argc, argv, "dc:")) != -1){
+		switch (option)
 		{
-			cfg_file = change_cfg_filename(argc, argv);
+			case 'c':
+				cfg_file = optarg;
+				break;
+			case 'd':
+				debug = 1;
+				break;
+			default:
+				fprintf(stderr, "Argument incorrecte");
+				exit(1);
 		}
-		else if(strcmp(argv[1],"-d") == 0)
-		{
-			debug = 1;
-		}
+
 	}
+
 	debugger(debug, "ESTAT: DISCONNECTED");
 	debugger(debug, "Collecting configuration data");
 	dataconfig = collect_config_data(cfg_file);
@@ -110,16 +118,14 @@ int main(int argc, char *argv[])
 	fill_structures_and_send(dataconfig, ent, &metastruct);	
 
 	while(1){
-		check_console_command();
+		check_console_command(metastruct.sock);
 		register_req(debug, &metastruct);
 		alive(debug, &metastruct);
 	}
 
-	close(metastruct.sock);
-	return 0;
 }
 
-void check_console_command()
+void check_console_command(int sock)
 {
 	char word[5];
 	fd_set fdset;
@@ -134,6 +140,7 @@ void check_console_command()
 		/*fprintf(stderr,"WORD: %s\n",word);*/
 		if(strcmp(word,"quit") == 0){
 			wait(NULL);
+			close(sock);
 			exit(1);
 		}
 	}
@@ -166,7 +173,6 @@ void console(int debug)
 {
 	int quit = 0;
 	char word[5];
-	debugger(debug, "Console activated\n");
 	while(quit == 0){
 		fprintf(stderr,">");
 		fgets(word, sizeof(word), stdin);
@@ -192,8 +198,9 @@ void alive(int debug, struct meta_struct *metastruct)
 	strcpy(metastruct->tosend_UDP_pack.num_aleatori,
 					metastruct->recv_reg_UDP.num_aleatori);
 	while(i < u){
+		check_console_command(metastruct->sock);
 		debugger(debug, "Enviat ALIVE_INF");
-		send_UDP_pack(metastruct);
+		send_UDP_pack(debug, metastruct);
 		sleep(r);
 		
     	FD_ZERO(&fdset);
@@ -255,7 +262,7 @@ void register_req(int debug, struct meta_struct *metastruct)
 	}
 	if(answ == 0)
 	{
-		printf("Register answer time expired");
+		fprintf(stderr, "Register answer time expired");
 		exit(-2);
 	}
 }
@@ -267,7 +274,7 @@ int register_process(fd_set fdset, struct timeval timeout, int debug,
 	int h = 1;
 	int answ = 0;
 	timeout.tv_sec = t;
-	send_UDP_pack(metastruct);
+	send_UDP_pack(debug, metastruct);
 	debugger(debug, "Enviat REGISTER_REQ");
 	for(i = 1; i<p && answ == 0;i++){
 		if(i>=n && (i-n+1)<m){
@@ -285,9 +292,9 @@ int select_process(int debug, fd_set fdset, struct timeval timeout,
     FD_ZERO(&fdset);
     FD_SET(metastruct->sock, &fdset);
     if(select(8, &fdset, NULL, NULL, &timeout) == 0){
-			send_UDP_pack(metastruct);
+			send_UDP_pack(debug, metastruct);
 			debugger(debug, "Enviat REGISTER_REQ");
-			check_console_command();
+			check_console_command(metastruct->sock);
 	}else{
 			debugger(debug, "Rebuda resposta a REGISTER_REQ");
 			metastruct->recv_reg_UDP =  recvfrom_UDP(metastruct->sock);
@@ -307,12 +314,12 @@ int UDP_answer_treatment(int debug, struct PDU_package recv_reg_UDP) /*TODO: can
 	}else if(recv_reg_UDP.tipus_paquet == 0x03){
 		debugger(debug, "Paquet rebut, REGISTER_REJ");
 		debugger(debug, "ESTAT: DISCONNECTED");
-		printf("El registre ha estat rebutjat. Motiu: %s\n",recv_reg_UDP.dades);
+		fprintf(stderr,"El registre ha estat rebutjat. Motiu: %s\n",recv_reg_UDP.dades);
 		exit(-1);
 	}else if(recv_reg_UDP.tipus_paquet == 0x09){
 		debugger(debug, "Paquet rebut, ERROR");
 		debugger(debug, "ESTAT: DISCONNECTED");
-		printf("Error de protocol");
+		debugger(debug,"Error de protocol");
 		exit(-2);
 	}else if(recv_reg_UDP.tipus_paquet == 0x11){
 		debugger(debug, "Paquet rebut, ALIVE_ACK");
@@ -348,7 +355,7 @@ struct PDU_package recvfrom_UDP(int sock)
 	return recv_reg_UDP;
 }
 /* Sends the register through the socket sock the tosend_UDP_pack to the addr_server address */
-void send_UDP_pack(struct meta_struct *metastruct)
+void send_UDP_pack(int debug, struct meta_struct *metastruct)
 {
 		if(sendto(metastruct->sock, &metastruct->tosend_UDP_pack,
 			sizeof(metastruct->tosend_UDP_pack)+1,0, 
@@ -389,20 +396,6 @@ void fill_structures_and_send(struct cfg_data dataconfig, struct hostent *ent,
         strcpy(metastruct->tosend_UDP_pack.dades,"");
 }
 
-char* change_cfg_filename(int argc, char *argv[])
-{
-	if(argc != 3)
-	{
-		printf("Use:\n");
-	       	printf("\t%s -c <nom_arxiu>\n",argv[0]);
-		exit(-1);
-	}
-	else
-	{
-		 return argv[2];
-	}
-}
-
 /* Function that collects configuration data */
 struct cfg_data collect_config_data(char cfg_file[])
 {
@@ -413,7 +406,11 @@ struct cfg_data collect_config_data(char cfg_file[])
 
 	struct cfg_data dataconfig;
 
-	fpointer = fopen(cfg_file,"r");
+	if((fpointer = fopen(cfg_file,"r")) == NULL){
+		fprintf(stderr, "File does not exist\n");
+		exit(1);
+
+	}
         while(fgets(singleLine,100,fpointer) != NULL)
         {
                 cfg_param = strtok(singleLine," ");             
@@ -435,8 +432,8 @@ struct cfg_data collect_config_data(char cfg_file[])
                 }       
                 else
                 {
-                        printf("Error in the content of %s\n",cfg_file );
-                        printf("Terminating process\n");
+                        fprintf(stderr, "Error in the content of %s\n",cfg_file );
+                        fprintf(stderr, "Terminating process\n");
                         exit(-1);
                 }
 	}
