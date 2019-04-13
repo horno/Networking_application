@@ -8,6 +8,7 @@
 #include <sys/select.h>
 
 #include <string.h>
+#include <signal.h>
 
 
 #define h_addr h_addr_list[0] /* Backward compatibility */
@@ -42,6 +43,8 @@ struct meta_struct{
 	struct PDU_package tosend_UDP_pack, recv_reg_UDP; /*TODO Utilitzar paquets de dalt a*/
 };
 
+typedef void (*sighandler_t)(int);
+sighandler_t signal(int signum, sighandler_t handler);
 
 /* Function declarations */
 struct cfg_data collect_config_data(char cfg_file[]);
@@ -59,6 +62,9 @@ int select_process(int debug, fd_set fdset, struct timeval timeout,
                      struct meta_struct *metastruct);
 void alive(int debug ,struct meta_struct *metastruct);
 int authenticate_alive(int debug, struct PDU_package register_pack, struct PDU_package alive_pack);
+void console(int pid);
+void sigint();
+
 
 /* TODO: Implementar debugguer a cada funció en ves de main? */
 /* Main function */
@@ -66,6 +72,7 @@ int main(int argc, char *argv[])
 {
 	char *cfg_file = "client.cfg";
 	int debug = 0;
+	pid_t pid;
 
     struct meta_struct metastruct;
 	struct cfg_data dataconfig;
@@ -89,6 +96,17 @@ int main(int argc, char *argv[])
 	dataconfig = collect_config_data(cfg_file);
 	strcpy(metastruct.tosend_UDP_pack.nom_equip,dataconfig.nom_equip); 
 
+	pid = fork();
+	if (pid == 0){
+		console(pid);
+	}else if(pid != -1){
+
+	}else{
+		perror("Error amb el fork del procés de la consola");
+		exit(1);
+	}
+
+
 	debugger(debug, "Opening UDP socket");
 	/* Opens UDP socket */
 	if((metastruct.sock = socket(AF_INET,SOCK_DGRAM,0))<0)
@@ -97,7 +115,7 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	fill_structures_and_send(dataconfig, ent, &metastruct);
+	fill_structures_and_send(dataconfig, ent, &metastruct);	
 
 	while(1){
 		register_req(debug, &metastruct);
@@ -106,6 +124,26 @@ int main(int argc, char *argv[])
 
 	close(metastruct.sock);
 	return 0;
+}
+void console(int pid)
+{
+	int quit = 0;
+	char word[5];
+	printf("Console activated\n");
+	while(quit == 0){
+		fgets(word, sizeof(word), stdin);
+		if(strcmp(word,"quit") == 0){
+			quit = 1;
+		}
+	}
+	printf("Console deactivated");
+	signal(SIGINT, sigint);
+	kill(pid, SIGINT); 
+	exit(1);
+}
+
+void sigint(){
+	signal(SIGINT, sigint);
 }
 
 void alive(int debug, struct meta_struct *metastruct)
