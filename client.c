@@ -260,7 +260,8 @@ int authenticate_alive(int debug,struct PDU_package register_pack, struct PDU_pa
 {
 	debugger(debug, "Autenticant el paquet Alive rebut");
 	if(strcmp(register_pack.MAC_addr, alive_pack.MAC_addr) != 0 || 
-	   strcmp(register_pack.nom_equip, alive_pack.nom_equip) != 0){
+	   strcmp(register_pack.nom_equip, alive_pack.nom_equip) != 0 ||
+	   strcmp(register_pack.num_aleatori, alive_pack.num_aleatori) != 0){
 		   debugger(debug, "Paquet Alive no correspon al servidor registrat, paquet ignorat ");
 		   return 1;
 	}else{
@@ -292,9 +293,9 @@ void register_req(int debug, struct meta_struct *metastruct)
 		debugger(debug, "Començant procés de registre");
 		answ = register_process(fdset, timeout, debug, metastruct);
 	}
-	if(answ == 0)
+	if(answ != 1)
 	{
-		fprintf(stderr, "Register answer time expired");
+		fprintf(stderr, "Register answer time expired\n");
 		exit(-2);
 	}
 }
@@ -354,7 +355,6 @@ int UDP_answer_treatment(int debug, struct PDU_package recv_reg_UDP) /*TODO: can
 		exit(-2);
 	}else if(recv_reg_UDP.tipus_paquet == 0x11){
 		debugger(debug, "Paquet rebut, ALIVE_ACK");
-		debugger(debug, "Estat: ALIVE");
 		return 1;
 	}else if(recv_reg_UDP.tipus_paquet == 0x12){
 		debugger(debug, "Paquet rebut, ALIVE_NACK");

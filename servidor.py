@@ -7,6 +7,8 @@ import random
 import time
 import sys
 import os
+import signal
+import select
 from ctypes import *
 
 global equips_dat
@@ -28,8 +30,13 @@ def extract_cfg_data():
         cfg_file = args.c
     else:
         cfg_file = "server.cfg"
+    if not os.path.exists(cfg_file):
+        print("File not found")
+        exit(-1)
+
     f = open(cfg_file, 'r')
     line = f.readline()
+
     while line:
         words = line.split()
         if words[0] == 'Nom':
@@ -75,7 +82,8 @@ class PDU(Structure):
 def authorised(p):
     for i in equips_dat:
         if i['nom'] == p.nom:
-            return True, i    
+            return True, i
+    return False, {}
 
 def nack_pdu_send(addr, sock, message):
     nack_pdu = PDU(tipus=0x02, nom='', MAC='', aleatori='', dades= message)
@@ -98,6 +106,9 @@ def check_state(addr, sock, p, equip_dat):
                     equip_dat['estat'] = 'REGISTERED'
                     actualize_equips(p.nom, 'estat', 'REGISTERED')
                     debugger(p.nom + ' passa a estat REGISTERED')
+                    actualize_equips(p.nom, 'TTL', 0)
+                    debugger("Creat thread per gestionar alive")
+                    threading.Thread(target = ttl_register, args=(equip_dat['nom'],)).start()
                 else:
                     message = 'Ip del primer missatge no concorda'
                     debugger('Petició de registre de ' + equip_dat['nom'] + ' denegada per:' + message)
@@ -109,6 +120,7 @@ def check_state(addr, sock, p, equip_dat):
                 debugger(p.nom + ' passa a estat REGISTERED')
                 correct_data(addr, sock, p ,equip_dat)
                 actualize_equips(p.nom, 'TTL', 0)
+                debugger("Creat thread per gestionar alive")
                 threading.Thread(target = ttl_register, args=(equip_dat['nom'],)).start()
         else:
             message = 'Mac no concorda o nombre aleatori no a zeros'
@@ -156,7 +168,7 @@ def attend(data, addr, sock):
         alive_inf(addr, sock, p)
 
 def ttl_register(name):
-    debugger('Comença temporitzacio de REGISTER de '+name)
+    debugger('Comença temporitzacio de REGISTER a ALIVE de '+name)
     actualize_equips(name, 'TTL', 2)    
     for i in range(j):
         time.sleep(r)
@@ -208,31 +220,45 @@ def console():
     quit = False
     debugger('Terminal activa')
     while not quit:
-        line = sys.stdin.readline()
-        word = line.split()
-        if(word != [] and word[0] == 'quit'):
-            quit = True
-        elif word != [] and word[0] == 'list':
-            cp=('-NOM-','-MAC-','-ESTAT-','-IP-','-ALEATORI-')
-            print ('{0:>0} {1:>10} {2:>16} {3:>11} {4:>13}'.format(*cp))
-            for i in equips_dat:
-                if i['estat'] == 'REGISTERED' or i['estat'] == 'ALIVE':
-                    cp = (i['nom'],i['MAC'],i['estat'],i['ip'],i['aleatori'])
-                    print ('{0:>0} {1:>14} {2:>14} {3:>11} {4:>8}'.format(*cp))
-                elif i['estat'] == 'DISCONNECTED':
-                    cp = (i['nom'],i['MAC'],i['estat'])
-                    print ('{0:>0} {1:>14} {2:>14}'.format(*cp))
-        else:
-            debugger('Comanda incorrecta')
+        try:
+            readable, [], [] = select.select([sys.stdin],[],[],0.0)
+        except ValueError:
+            exit(-1)
+        if readable != []:    
+            try:
+                line = sys.stdin.readline()
+            except ValueError:
+                exit(-1)
+
+            word = line.split()
+            if(word != [] and word[0] == 'quit'):
+                quit = True
+            elif word != [] and word[0] == 'list':
+                cp=('-NOM-','-MAC-','-ESTAT-','-IP-','-ALEATORI-')
+                print ('{0:>0} {1:>10} {2:>16} {3:>11} {4:>13}'.format(*cp))
+                for i in equips_dat:
+                    if i['estat'] == 'REGISTERED' or i['estat'] == 'ALIVE':
+                        cp = (i['nom'],i['MAC'],i['estat'],i['ip'],i['aleatori'])
+                        print ('{0:>0} {1:>14} {2:>14} {3:>11} {4:>8}'.format(*cp))
+                    elif i['estat'] == 'DISCONNECTED':
+                        cp = (i['nom'],i['MAC'],i['estat'])
+                        print ('{0:>0} {1:>14} {2:>14}'.format(*cp))
+            else:
+                print('Comanda incorrecta')
 
     os._exit(1)
+
+def sigint_handler(signum, frame):
+    quit = True
+    sock.close()
+    exit(-1)
 
 if __name__ == '__main__':
     args = parse_arguments()
     server_cfg = extract_cfg_data()
     global equips_dat
     equips_dat = extract_equips_dat()
-    threading.Thread(target=console).start()
+
     UDP_IP = '127.0.0.1'
     UDP_PORT = int(server_cfg['UDP-port'])
     debugger("Socket UDP obert")
@@ -240,10 +266,14 @@ if __name__ == '__main__':
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("", UDP_PORT))
 
+    signal.signal(signal.SIGINT, sigint_handler)
+    threading.Thread(target=console).start()
+
     debugger("Inici de bucle de servei infinit")
     try:
          while True:
             data, addr = sock.recvfrom(78)
             attend(data,addr, sock)
     finally:
+        quit = True
         sock.close()
