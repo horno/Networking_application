@@ -1,5 +1,9 @@
 		-- Pràctica 1 de xarxes --
 
+
+	-1 Printar canvis d'estat per stderr (o stdin), no sol
+	   per debug
+
 TODO CLIENT:
 	-1 Mirar si envio el motiu de rebug en paquets de rebug
 	   com NACKS i REJ
@@ -12,3 +16,4 @@ TODO CLIENT:
 	-3 Canvair a switch-case els ifs tant llagrs del client
 TODO SERVIDOR:
 	-1 Ficar paràmetre per canviar nom de equips.dat
+	-1 Especificar a la docu que el listen es fa de 3 clients

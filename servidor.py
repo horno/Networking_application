@@ -1,4 +1,5 @@
 # coding=utf-8
+# #!/usr/bin/env python
 import argparse
 import socket
 import threading
@@ -16,6 +17,7 @@ quit = False
 j = 2
 k = 3
 r = 3
+l = 3 #queue length
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Server side of a client-server communication')
@@ -70,6 +72,10 @@ def debugger(debug_text):
     if args.d:
         print("Debugger -> "+debug_text)
 
+def superdebugger(debug_text): #Treure per entrega
+    if args.d:
+        print("SUPERDEBUGGER -----------------> "+debug_text)
+
 class PDU(Structure):
     _fields_ = [
         ('tipus', c_ubyte),
@@ -85,24 +91,23 @@ def authorised(p):
             return True, i
     return False, {}
 
-def nack_pdu_send(addr, sock, message):
+def nack_pdu_send(addr, udp_sock, message):
     nack_pdu = PDU(tipus=0x02, nom='', MAC='', aleatori='', dades= message)
-    sock.sendto(nack_pdu, addr)
+    udp_sock.sendto(nack_pdu, addr)
 
-def correct_data(addr, sock, p, equip_dat):
+def correct_data(addr, udp_sock, p, equip_dat):
     rand = random.randint(1000001,1999999)
     rand = str(rand)[1:]
-    ack_pdu = PDU(tipus=0x01, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=rand, dades='9000')
-    sock.sendto(ack_pdu, addr)
+    ack_pdu = PDU(tipus=0x01, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=rand, dades=server_cfg['TCP-port'])
+    udp_sock.sendto(ack_pdu, addr)
     actualize_equips(p.nom, 'aleatori', rand)
 
-
-def check_state(addr, sock, p, equip_dat):
+def check_state(addr, udp_sock, p, equip_dat):
     if equip_dat['estat'] == 'DISCONNECTED':
         if p.MAC == equip_dat['MAC'] and p.aleatori == '000000':
             if 'ip' in equip_dat:
                 if addr[0] == equip_dat['ip']:
-                    correct_data(addr, sock, p, equip_dat)
+                    correct_data(addr, udp_sock, p, equip_dat)
                     equip_dat['estat'] = 'REGISTERED'
                     actualize_equips(p.nom, 'estat', 'REGISTERED')
                     debugger(p.nom + ' passa a estat REGISTERED')
@@ -112,30 +117,29 @@ def check_state(addr, sock, p, equip_dat):
                 else:
                     message = 'Ip del primer missatge no concorda'
                     debugger('Petició de registre de ' + equip_dat['nom'] + ' denegada per:' + message)
-                    nack_pdu_send(addr, sock, message)
+                    nack_pdu_send(addr, udp_sock, message)
             else:
                 equip_dat['ip'] = addr[0]
                 actualize_equips(p.nom, 'ip', addr[0])
                 actualize_equips(p.nom, 'estat', 'REGISTERED')  
                 debugger(p.nom + ' passa a estat REGISTERED')
-                correct_data(addr, sock, p ,equip_dat)
+                correct_data(addr, udp_sock, p ,equip_dat)
                 actualize_equips(p.nom, 'TTL', 0)
                 debugger("Creat thread per gestionar alive")
                 threading.Thread(target = ttl_register, args=(equip_dat['nom'],)).start()
         else:
             message = 'Mac no concorda o nombre aleatori no a zeros'
             debugger('Petició de registre de ' + p.nom + ' denegada per:' + message)
-            nack_pdu_send(addr, sock, message)
+            nack_pdu_send(addr, udp_sock, message)
     else:
         if p.MAC == equip_dat['MAC']  and addr[0] == equip_dat['ip']:
             ack_pdu = PDU(tipus=0x01, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=equip_dat['aleatori'], dades='9000')
-            sock.sendto(ack_pdu, addr)
+            udp_sock.sendto(ack_pdu, addr)
             debugger(p.nom + ' segueeix en estat ' + equip_dat['estat'])
-
         else:
             message = 'IP, aleatori o MAC no concorden'
             debugger('Petició de registre de ' + p.nom + ' denegada per:' + message)            
-            nack_pdu_send(addr, sock, message)
+            nack_pdu_send(addr, udp_sock, message)
     return equip_dat
 
 def actualize_equips(name, key, value):
@@ -148,24 +152,23 @@ def checkout_equips(name, key):
         if i['nom'] == name:
             return i[key]
 
-def register_petition(addr, sock, p):
+def register_petition(addr, udp_sock, p):
     auth, equip_dat = authorised(p)
     if auth:
-        check_state(addr, sock, p, equip_dat)
+        check_state(addr, udp_sock, p, equip_dat)
     else:
         debugger('Petició de registre de ' + p.nom + ' rebutjada, equip no autoritat')
         rej_pdu = PDU(tipus=0x03, nom='', MAC='', aleatori='', dades='Equip no autoritzat')
-        sock.sendto(rej_pdu, addr)
+        udp_sock.sendto(rej_pdu, addr)
     
-
-def attend(data, addr, sock):
+def attend(data, addr, udp_sock):
     p = PDU.from_buffer_copy(data)
-    if p.tipus == 0:
+    if p.tipus == 0x00:
         debugger('Rebuda petició de registre de ' + p.nom)
-        register_petition(addr, sock, p)
+        register_petition(addr, udp_sock, p)
     elif p.tipus == 0x10:
         debugger('Rebut alive inf de ' + p.nom)
-        alive_inf(addr, sock, p)
+        alive_inf(addr, udp_sock, p)
 
 def ttl_register(name):
     debugger('Comença temporitzacio de REGISTER a ALIVE de '+name)
@@ -189,32 +192,37 @@ def ttl_alive(name):
         debugger(name + ' passa a estat DISCONNECTED')
         actualize_equips(name, 'estat', 'DISCONNECTED')
 
-def alive_inf(addr, sock, p):
+def alive_inf(addr, udp_sock, p):
     auth,equip_dat = authorised(p)
     if (auth and (equip_dat['estat'] == 'ALIVE' or  equip_dat['estat'] == 'REGISTERED')
     and equip_dat['MAC'] == p.MAC and addr[0] == equip_dat['ip'] and 
     p.aleatori == equip_dat['aleatori'] ):
         alive_ack_pdu = PDU(tipus=0x011, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=equip_dat['aleatori'], dades='')
-        sock.sendto(alive_ack_pdu, addr)
+        udp_sock.sendto(alive_ack_pdu, addr)
         if equip_dat['estat'] == 'REGISTERED':
             actualize_equips(p.nom, 'estat', 'ALIVE')
             debugger(p.nom + ' passa a estat ALIVE')
+
+            debugger("Creat thread per gestionar comunicació TCP")
+            threading.Thread(target = TCP_communication, args = (addr ,p,)).start()
+
+
         threading.Thread(target = ttl_alive, args=(equip_dat['nom'],)).start()
     elif  not auth  or (equip_dat['estat'] != 'ALIVE' and  equip_dat['estat'] != 'REGISTERED'):
         message = 'Equip no autoritzat o no registrat'
         debugger('Alive_inf de '+p.nom+' rebutjat:' + message)
         alive_rej_pdu = PDU(tipus=0x013, nom='', MAC='', aleatori='', dades=message)
-        sock.sendto(alive_rej_pdu, addr)
+        udp_sock.sendto(alive_rej_pdu, addr)
     elif addr[0] != equip_dat['ip'] or p.aleatori != equip_dat['aleatori']:
         message = 'Nombre aleatori o ip no concorden'
         debugger('Alive_inf de '+p.nom+' denegat:' + message)
         alive_nack_pdu = PDU(tipus=0x012, nom='', MAC='', aleatori='', dades=message)
-        sock.sendto(alive_nack_pdu, addr)
+        udp_sock.sendto(alive_nack_pdu, addr)
     else:
         message = 'Paquet amb format incorrecte'
         debugger(message)
         err_pdu = PDU(tipus=0x09, nom='', MAC='', aleatori='', dades=message)
-        sock.sendto(err_pdu, addr)
+        udp_sock.sendto(err_pdu, addr)
 
 def console():
     quit = False
@@ -232,6 +240,7 @@ def console():
 
             word = line.split()
             if(word != [] and word[0] == 'quit'):
+                debugger("El servidor es tancarà en uns instants")
                 quit = True
             elif word != [] and word[0] == 'list':
                 cp=('-NOM-','-MAC-','-ESTAT-','-IP-','-ALEATORI-')
@@ -249,9 +258,19 @@ def console():
     os._exit(1)
 
 def sigint_handler(signum, frame):
+    global quit
     quit = True
-    sock.close()
+    udp_sock.close()
     exit(-1)
+
+def TCP_communication(addr, p):
+    superdebugger("HOLA SÓC EL THREAD DE COMUNICACÓ TCP!")
+    #con_sock, addr = tcp_sock.accept()
+    #superdebugger("Connexió TCP amb " + p.nom + " acceptada")
+    
+    #con_sock.close()
+    superdebugger("Tancada connexió TCP amb " + p.nom)
+
 
 if __name__ == '__main__':
     args = parse_arguments()
@@ -259,12 +278,16 @@ if __name__ == '__main__':
     global equips_dat
     equips_dat = extract_equips_dat()
 
-    UDP_IP = '127.0.0.1'
-    UDP_PORT = int(server_cfg['UDP-port'])
+
+    udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_sock.bind(("", int(server_cfg['UDP-port'])))
     debugger("Socket UDP obert")
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(("", UDP_PORT))
+    tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcp_sock.bind(("", int(server_cfg['TCP-port'])))
+    debugger("Socket TCP obert")
+    a = tcp_sock.listen(l)
+    superdebugger("LISTEN FET: " + str(a))
 
     signal.signal(signal.SIGINT, sigint_handler)
     threading.Thread(target=console).start()
@@ -272,8 +295,9 @@ if __name__ == '__main__':
     debugger("Inici de bucle de servei infinit")
     try:
          while True:
-            data, addr = sock.recvfrom(78)
-            attend(data,addr, sock)
+            data, addr = udp_sock.recvfrom(78)
+            attend(data,addr, udp_sock)
     finally:
         quit = True
-        sock.close()
+        udp_sock.close()
+        tcp_sock.close()
