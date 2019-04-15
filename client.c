@@ -26,6 +26,7 @@
 #define q 3
 #define r 3
 #define u 3
+#define w 4
 
 /* Structures */
 struct cfg_data{ /*TO DO: rename? */
@@ -58,7 +59,8 @@ struct console_needs{
 	int fdcli[2];
 	int tcp_port;
 	char boot_file[20];
-	char nom[7];
+	struct PDU_UDP_package reg_info;
+	in_addr_t  s_addr;
 };
 
 
@@ -82,7 +84,8 @@ void console(int debug, struct console_needs cons_struct);
 void fork_console(int debug, struct console_needs *cons_struct);
 void check_console_command(int sock, int fdcons[2]);
 void close_commandline(int fdcli[2]);
-void sendconf(struct console_needs cons_struct);
+void sendconf(int debug, struct console_needs cons_struct);
+void pass_info(struct console_needs *cons_struct, struct meta_struct metastruct);
 
 
 
@@ -121,11 +124,12 @@ int main(int argc, char *argv[])
 		}
 
 	}
-
+	boot_file[sizeof(boot_file)] = '\0';
 	debugger(debug, "ESTAT: DISCONNECTED");
 	debugger(debug, "Collecting configuration data");
 	dataconfig = collect_config_data(cfg_file);
 	strcpy(metastruct.tosend_UDP_pack.nom_equip,dataconfig.nom_equip); 
+	strcpy(cons_struct.boot_file, boot_file);
 
 
 	debugger(debug, "Opening UDP socket");
@@ -137,7 +141,7 @@ int main(int argc, char *argv[])
 	}
 
 	fill_structures_and_send(dataconfig, ent, &metastruct);
-
+	
 	while(1){
 		cons_struct.tcp_port = register_req(debug, &metastruct);
 		alive(debug, &metastruct, &cons_struct);
@@ -218,10 +222,10 @@ void console(int debug, struct console_needs cons_struct)
 				exit(1);
 			}else if(strcmp(buff, "send-conf\n")== 0 || strcmp(buff, "send-conf") == 0){
 				fprintf(stderr, "I have to send conf!\n");
-				sendconf(cons_struct);
+				sendconf(debug, cons_struct);
 			}else if(strcmp(buff, "get-conf\n") == 0 || strcmp(buff, "get-conf") == 0){
-				fprintf(stderr, "Get-conf not implemented yet!\n");
-			}else{
+				debugger(debug,"Get-conf not implemented yet!\n");
+			}else if(strcmp(buff, "\n") != 0){
 				fprintf(stderr, "Comanda incorrecta\n");
 			}
 			fprintf(stderr, ">");
@@ -229,8 +233,97 @@ void console(int debug, struct console_needs cons_struct)
 	}
 }
 
-void sendconf(struct console_needs cons_struct){
-	fprintf(stderr, "Nom arxiu cfg: %s\n",cons_struct.boot_file);
+void sendconf(int debug, struct console_needs cons_struct){
+	FILE *fp;
+	int sz;
+	int sockfd;
+	struct PDU_TCP_package send_tcp_pack;
+	struct PDU_TCP_package recv_tcp_pack;
+	struct sockaddr_in addr_server;
+	struct timeval timeout;
+	fd_set fdset;
+	if((fp = fopen(cons_struct.boot_file, "r")) == NULL){
+		fprintf(stderr, "Problem with the file");
+		exit(-1);
+	}
+	fseek(fp, 0L, SEEK_END);
+	sz = ftell(fp);
+	rewind(fp);
+	sprintf(send_tcp_pack.dades, "%s,%d", cons_struct.boot_file, sz);
+
+	send_tcp_pack.tipus_paquet = 0x20;
+	strcpy(send_tcp_pack.MAC_addr,cons_struct.reg_info.MAC_addr);
+	strcpy(send_tcp_pack.nom_equip,cons_struct.reg_info.nom_equip);
+	strcpy(send_tcp_pack.num_aleatori,cons_struct.reg_info.num_aleatori);
+
+	if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+		fprintf(stderr, "Error al obrir el socket");
+		exit(-1);
+	} 
+	addr_server.sin_family = AF_INET;
+	addr_server.sin_addr.s_addr = cons_struct.s_addr;
+	addr_server.sin_port = htons(cons_struct.tcp_port);
+
+	if (connect(sockfd, (struct sockaddr*)&addr_server, sizeof(addr_server)) != 0) { 
+    	fprintf(stderr,"La connexió amb el servidor ha fallat\n"); 
+    	exit(0); 
+    } 
+	debugger(debug, "Connectant socket TCP");
+	send(sockfd, &send_tcp_pack, sizeof(send_tcp_pack)+1,0);
+	debugger(debug, "Enviat SEND_FILE");
+
+	FD_ZERO(&fdset);
+	FD_SET(sockfd, &fdset);
+	timeout.tv_sec = w;
+	timeout.tv_usec = 0;
+	if(select(sockfd+1, &fdset, NULL, NULL, &timeout) == 0){
+		debugger(debug, "Temps d'espera de SEND_FILE vençut");		
+	}else{
+		if(recv(sockfd, &recv_tcp_pack, sizeof(recv_tcp_pack)+1, 0) < 0){
+			fprintf(stderr, "Error al enviar paquet TCP\n");
+			exit(-1);
+		}
+		if(recv_tcp_pack.tipus_paquet == 0x21){
+			debugger(debug, "Rebut SEND_ACK");
+			fprintf(stderr, "YAY! Send accepted");
+		}else{
+			fprintf(stderr, "Send not accepted :(");
+			debugger(debug, "Rebut paquet que no és SEND_ACK");
+		}
+	}
+
+
+
+	close(sockfd);
+
+
+	/*int answ = 0;
+    FD_ZERO(&fdset);
+    FD_SET(metastruct->sock, &fdset);
+    if(select(metastruct->sock+1, &fdset, NULL, NULL, &timeout) == 0){
+			send_UDP_pack(debug, metastruct);
+			debugger(debug, "Enviat REGISTER_REQ");
+	}else{
+			debugger(debug, "Rebuda resposta a REGISTER_REQ");
+			metastruct->recv_reg_UDP =  recvfrom_UDP(metastruct->sock);
+			answ = UDP_answer_treatment(debug, metastruct->recv_reg_UDP);
+	}
+    return answ;
+
+
+	if(sendto(metastruct->sock, &metastruct->tosend_UDP_pack,
+			sizeof(metastruct->tosend_UDP_pack)+1,0, 
+			(struct sockaddr*) &metastruct->addr_server, sizeof(metastruct->addr_server)) < 0)
+		{
+			perror("Error al enviar el paquet");
+			exit(-1);
+		}*/
+
+
+
+	/*char singleLine[100];*/
+	/*if((fpointer = fopen(cfg_file,"r")) == NULL){
+	while(fgets(singleLine,100,fpointer) != NULL)*/
 
 }
 
@@ -264,6 +357,7 @@ void alive(int debug, struct meta_struct *metastruct, struct console_needs *cons
 			   authenticate_alive(debug, metastruct->recv_reg_UDP,recv_alive_UDP) == 0){
 				i = 0;
 				if(first == 1){
+					pass_info(cons_struct,*metastruct);
 					fork_console(debug, cons_struct);
 					debugger(debug, "Rebut primer alive!");
 					debugger(debug, "ESTAT: ALIVE");
@@ -280,6 +374,13 @@ void alive(int debug, struct meta_struct *metastruct, struct console_needs *cons
 	if(!first){
 		close_commandline(cons_struct->fdcli);
 	}
+}
+void pass_info(struct console_needs *cons_struct, struct meta_struct metastruct){
+	strcpy(cons_struct->reg_info.MAC_addr,metastruct.tosend_UDP_pack.MAC_addr);
+	strcpy(cons_struct->reg_info.nom_equip,metastruct.tosend_UDP_pack.nom_equip);
+	strcpy(cons_struct->reg_info.num_aleatori,metastruct.tosend_UDP_pack.num_aleatori);
+	
+	cons_struct->s_addr = metastruct.addr_server.sin_addr.s_addr;
 }
 int authenticate_alive(int debug,struct PDU_UDP_package register_pack, struct PDU_UDP_package alive_pack)
 {
