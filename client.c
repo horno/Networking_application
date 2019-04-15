@@ -87,9 +87,11 @@ void close_commandline(int fdcli[2]);
 void sendconf(int debug, struct console_needs cons_struct);
 void pass_info(struct console_needs *cons_struct, struct meta_struct metastruct);
 void send_data(int debug, int sockfd, struct PDU_TCP_package send_tcp_pack, FILE* fp);
-void connect_TCP_sendconf(int debug, int sockfd, struct console_needs cons_struct);
+void connect_TCP(int debug, int sockfd, struct console_needs cons_struct);
 void select_sendconf(int debug, int sockfd, struct PDU_TCP_package recv_tcp_pack, 
 					 struct PDU_TCP_package send_tcp_pack, FILE* fp);
+void getconf(int debug, struct console_needs cons_struct);
+
 
 
 
@@ -225,10 +227,11 @@ void console(int debug, struct console_needs cons_struct)
 				fprintf(stderr, "El client es tancarà en uns instants\n");
 				exit(1);
 			}else if(strcmp(buff, "send-conf\n")== 0 || strcmp(buff, "send-conf") == 0){
-				fprintf(stderr, "I have to send conf!\n");
+				debugger(debug, "Executant comanda d'enviament de configuració");				
 				sendconf(debug, cons_struct);
 			}else if(strcmp(buff, "get-conf\n") == 0 || strcmp(buff, "get-conf") == 0){
-				debugger(debug,"Get-conf not implemented yet!\n");
+				debugger(debug, "Executant comanda d'obtenció de configuració");
+				getconf(debug, cons_struct);
 			}else if(strcmp(buff, "\n") != 0){
 				fprintf(stderr, "Comanda incorrecta\n");
 			}
@@ -237,19 +240,90 @@ void console(int debug, struct console_needs cons_struct)
 	}
 }
 
+void getconf(int debug, struct console_needs cons_struct){
+	struct PDU_TCP_package send_tcp_pack;
+	struct PDU_TCP_package recv_tcp_pack;
+	struct timeval timeout;
+	fd_set fdset;
+	FILE *fp;
+	int sz;
+	int end = 0;
+	int sockfd;
+	
+	if((fp = fopen(cons_struct.boot_file, "w")) == NULL){
+		fprintf(stderr, "No s'ha pogut obrir el fitxer de configuració %s\n", cons_struct.boot_file);
+		exit(-1);
+	}
+	
+	send_tcp_pack.tipus_paquet = 0x30;
+	strcpy(send_tcp_pack.MAC_addr,cons_struct.reg_info.MAC_addr);
+	strcpy(send_tcp_pack.nom_equip,cons_struct.reg_info.nom_equip);
+	strcpy(send_tcp_pack.num_aleatori,cons_struct.reg_info.num_aleatori);
+	memset(send_tcp_pack.dades, 0, sizeof(send_tcp_pack.dades));
+	fseek(fp, 0L, SEEK_END);
+	sz = ftell(fp);
+	rewind(fp);
+	sprintf(send_tcp_pack.dades, "%s,%d", cons_struct.boot_file, sz);
+	
+	if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+		fprintf(stderr, "Error al obrir el socket");
+		exit(-1);
+	} 
+
+	connect_TCP(debug, sockfd, cons_struct);
+
+
+	send(sockfd, &send_tcp_pack, sizeof(send_tcp_pack),0);
+	
+	
+
+
+	while(end == 0){
+
+		FD_ZERO(&fdset);
+		FD_SET(sockfd, &fdset);
+		timeout.tv_sec = w;
+		timeout.tv_usec = 0;
+		if(select(sockfd+1, &fdset, NULL, NULL, &timeout) == 0){
+			debugger(debug, "Temps d'espera de GET_CONF vençut");
+			end = 1;
+		}else{
+			if(recv(sockfd, &recv_tcp_pack, sizeof(recv_tcp_pack), 0) < 0){
+				fprintf(stderr, "Error al rebre paquet TCP\n");
+				close(sockfd);
+				exit(-1);		
+			}
+			if(recv_tcp_pack.tipus_paquet == 0x31){
+				debugger(debug, "Rebut GET_ACK");
+
+			}else if(recv_tcp_pack.tipus_paquet == 0x34){
+				fprintf (fp, recv_tcp_pack.dades);
+			}else if(recv_tcp_pack.tipus_paquet == 0x35){
+				debugger(debug, "Rebut GET_END");
+				end = 1;
+			}else{
+				debugger(debug, "Paquet GET_FILE rebutjat, motiu:");
+				debugger(debug, recv_tcp_pack.dades);
+				end = 1;
+			}
+		}
+
+	}
+
+	debugger(debug, "Tancant canal TCP...");
+	fclose(fp);
+	close(sockfd);
+}
+
 void sendconf(int debug, struct console_needs cons_struct){
 	struct PDU_TCP_package send_tcp_pack;
 	struct PDU_TCP_package recv_tcp_pack;
 	FILE *fp;
 	int sz;
 	int sockfd;
-	/*fd_set fdset;
-	struct timeval timeout;*/
-
-
 
 	if((fp = fopen(cons_struct.boot_file, "r")) == NULL){
-		fprintf(stderr, "Problem with the file");
+		fprintf(stderr, "No s'ha pogut obrir el fitxer de configuració %s\n", cons_struct.boot_file);
 		exit(-1);
 	}
 	fseek(fp, 0L, SEEK_END);
@@ -267,37 +341,18 @@ void sendconf(int debug, struct console_needs cons_struct){
 		exit(-1);
 	} 
 
-	connect_TCP_sendconf
-	(debug, sockfd, cons_struct);
+	connect_TCP(debug, sockfd, cons_struct);
 
 	send(sockfd, &send_tcp_pack, sizeof(send_tcp_pack),0);
 	debugger(debug, "Enviat SEND_FILE");
 
 
 	select_sendconf(debug, sockfd, recv_tcp_pack, send_tcp_pack, fp);
-	/*FD_ZERO(&fdset);
-	FD_SET(sockfd, &fdset);
-	timeout.tv_sec = w;
-	timeout.tv_usec = 0;
-	if(select(sockfd+1, &fdset, NULL, NULL, &timeout) == 0){
-		debugger(debug, "Temps d'espera de SEND_FILE vençut");		
-	}else{
-		if(recv(sockfd, &recv_tcp_pack, sizeof(recv_tcp_pack), 0) < 0){
-			fprintf(stderr, "Error al enviar paquet TCP\n");
-			exit(-1);
-		}
-		if(recv_tcp_pack.tipus_paquet == 0x21){
-			debugger(debug, "Rebut SEND_ACK");
-			send_data(debug, sockfd, send_tcp_pack, fp);
-		}else{
-			debugger(debug, "Rebut paquet que no és SEND_ACK");
-		}
-	}*/
+	
 	debugger(debug, "Tancant canal TCP...");
-	fclose(fp);
 	close(sockfd);
+	fclose(fp);
 }
-
 
 void select_sendconf(int debug, int sockfd, struct PDU_TCP_package recv_tcp_pack, 
 					 struct PDU_TCP_package send_tcp_pack, FILE* fp){
@@ -318,13 +373,14 @@ void select_sendconf(int debug, int sockfd, struct PDU_TCP_package recv_tcp_pack
 		if(recv_tcp_pack.tipus_paquet == 0x21){
 			debugger(debug, "Rebut SEND_ACK");
 			send_data(debug, sockfd, send_tcp_pack, fp);
-		}else{
-			debugger(debug, "Rebut paquet que no és SEND_ACK");
+		}else{			
+			debugger(debug, "Paquet SEND_FILE rebutjat, motiu:");
+			debugger(debug, recv_tcp_pack.dades);
 		}
 	}
 }
 
-void connect_TCP_sendconf(int debug, int sockfd, struct console_needs cons_struct){
+void connect_TCP(int debug, int sockfd, struct console_needs cons_struct){
 	struct sockaddr_in addr_server;
 	addr_server.sin_family = AF_INET;
 	addr_server.sin_addr.s_addr = cons_struct.s_addr;
