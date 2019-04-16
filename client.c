@@ -4,7 +4,7 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <netdb.h> /* TO DO: es pot utilitzar? */
+#include <netdb.h>
 #include <sys/select.h>
 #include <sys/wait.h>
 
@@ -74,7 +74,7 @@ struct PDU_UDP_package recvfrom_UDP(int sock);
 int register_req(int debug,struct meta_struct *metastruct);
 int register_process(fd_set fdset, struct timeval timeout, int debug,
                     struct meta_struct *metastruct);	
-int UDP_answer_treatment(int debug, struct PDU_UDP_package recv_reg_UDP);
+int UDP_answer_treatment(int debug, struct PDU_UDP_package recv_reg_UDP, int sock);
 void debugger(int debug, char message[]);
 int select_process(int debug, fd_set fdset, struct timeval timeout,
                      struct meta_struct *metastruct);
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 
 	}
 	boot_file[sizeof(boot_file)] = '\0';
-	debugger(debug, "ESTAT: DISCONNECTED");
+	fprintf(stderr, "ESTAT: DISCONNECTED\n");
 	debugger(debug, "Collecting configuration data");
 	dataconfig = collect_config_data(cfg_file);
 	strcpy(metastruct.tosend_UDP_pack.nom_equip,dataconfig.nom_equip); 
@@ -276,8 +276,6 @@ void getconf(int debug, struct console_needs cons_struct){
 	send(sockfd, &send_tcp_pack, sizeof(send_tcp_pack),0);
 	
 	
-
-
 	while(end == 0){
 
 		FD_ZERO(&fdset);
@@ -432,7 +430,7 @@ void alive(int debug, struct meta_struct *metastruct, struct console_needs *cons
 			i++;
 		}else{
 			recv_alive_UDP = recvfrom_UDP(metastruct->sock);
-			if(UDP_answer_treatment(debug, recv_alive_UDP) == 1 &&
+			if(UDP_answer_treatment(debug, recv_alive_UDP, metastruct->sock) == 1 &&
 			   authenticate_alive(debug, metastruct->recv_reg_UDP,recv_alive_UDP) == 0){
 				i = 0;
 				if(first == 1){
@@ -442,7 +440,7 @@ void alive(int debug, struct meta_struct *metastruct, struct console_needs *cons
 					debugger(debug, "ESTAT: ALIVE");
 				}
 				first = 0;
-			}else if(UDP_answer_treatment(debug, recv_alive_UDP) == 2 &&
+			}else if(UDP_answer_treatment(debug, recv_alive_UDP, metastruct->sock) == 2 &&
 					 authenticate_alive(debug, metastruct->recv_reg_UDP,recv_alive_UDP) == 0){
 				i = u;				
 			}else{
@@ -486,9 +484,7 @@ int register_req(int debug, struct meta_struct *metastruct)
 	metastruct->tosend_UDP_pack.tipus_paquet = 0x00;
 	strcpy(metastruct->tosend_UDP_pack.num_aleatori,"000000");
 
-
 	debugger(debug, "Començant procés de registre");
-	debugger(debug, "ESTAT: WAIT_REG");
 	answ = register_process(fdset, timeout, debug, metastruct);
 	for(i = 0; i<(q-1) && answ != 1; i++)
 	{
@@ -501,6 +497,8 @@ int register_req(int debug, struct meta_struct *metastruct)
 	if(answ != 1)
 	{
 		fprintf(stderr, "Register answer time expired\n");
+		fprintf(stderr, "ESTAT: DISCONNECTED");
+		close(metastruct->sock);
 		exit(-2);
 	}
 	return atoi(metastruct->recv_reg_UDP.dades);
@@ -515,8 +513,9 @@ int register_process(fd_set fdset, struct timeval timeout, int debug,
 	timeout.tv_sec = t;
 	send_UDP_pack(debug, metastruct);
 	debugger(debug, "Enviat REGISTER_REQ");
+	fprintf(stderr, "ESTAT: WAIT_REG\n");
 	for(i = 1; i<p && answ == 0;i++){
-		if(i>=n && (i-n+1)<m){
+		if(i>n && (i-n+1)<=m){
 			h++;
 		}
 		timeout.tv_sec = h*t;
@@ -536,41 +535,54 @@ int select_process(int debug, fd_set fdset, struct timeval timeout,
 	}else{
 			debugger(debug, "Rebuda resposta a REGISTER_REQ");
 			metastruct->recv_reg_UDP =  recvfrom_UDP(metastruct->sock);
-			answ = UDP_answer_treatment(debug, metastruct->recv_reg_UDP);
+			answ = UDP_answer_treatment(debug, metastruct->recv_reg_UDP, metastruct->sock);
 	}
     return answ;
 }
-int UDP_answer_treatment(int debug, struct PDU_UDP_package recv_reg_UDP) /*TODO: canviar a switch case*/
+int UDP_answer_treatment(int debug, struct PDU_UDP_package recv_reg_UDP, int sock) /*TODO: canviar a switch case*/
 {
-	if(recv_reg_UDP.tipus_paquet == 0x01){
+	switch (recv_reg_UDP.tipus_paquet)
+	{
+	case 0x01:
 		debugger(debug, "Paquet rebut, REGISTER_ACK");
 		debugger(debug, "ESTAT: REGISTERED");
 		return 1;
-	}else if(recv_reg_UDP.tipus_paquet == 0x02){
+		break;
+	case 0x02:
 		debugger(debug, "Paquet rebut, REGISTER_NACK");
 		return 2;
-	}else if(recv_reg_UDP.tipus_paquet == 0x03){
+		break;
+	case 0x03:
 		debugger(debug, "Paquet rebut, REGISTER_REJ");
 		debugger(debug, "ESTAT: DISCONNECTED");
 		fprintf(stderr,"El registre ha estat rebutjat. Motiu: %s\n",recv_reg_UDP.dades);
+		close(sock);
 		exit(-1);
-	}else if(recv_reg_UDP.tipus_paquet == 0x09){
+		break;
+	case 0x09:
 		debugger(debug, "Paquet rebut, ERROR");
 		debugger(debug, "ESTAT: DISCONNECTED");
 		debugger(debug,"Error de protocol");
+		close(sock);
 		exit(-2);
-	}else if(recv_reg_UDP.tipus_paquet == 0x11){
+		break;
+	case 0x11:
 		debugger(debug, "Paquet rebut, ALIVE_ACK");
 		return 1;
-	}else if(recv_reg_UDP.tipus_paquet == 0x12){
+		break;
+	case 0x12:
 		debugger(debug, "Paquet rebut, ALIVE_NACK");
 		return 0;
-	}else if(recv_reg_UDP.tipus_paquet == 0x13){
+		break;
+	case 0x13:
 		debugger(debug, "Paquet rebut, ALIVE_REJ");
 		return 2;
-	}else{
+		break;
+	default:
 		debugger(debug,"Paquet rebut, NO IDENTIFICAT");
+		close(sock);
 		exit(-2);
+		break;
 	}
 }
 
