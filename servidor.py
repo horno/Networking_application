@@ -18,6 +18,24 @@ j = 2
 k = 3
 r = 3
 l = 3 #queue length
+w = 4
+
+class udp_PDU(Structure):
+    _fields_ = [
+        ('tipus', c_ubyte),
+        ('nom', c_char*7),
+        ('MAC', c_char*13),
+        ('aleatori', c_char*7),
+        ('dades', c_char*50)
+    ]
+class tcp_PDU(Structure):
+    _fields_ = [
+        ('tipus', c_ubyte),
+        ('nom', c_char*7),
+        ('MAC', c_char*13),
+        ('aleatori', c_char*7),
+        ('dades', c_char*150)
+    ]
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Server side of a client-server communication')
@@ -76,15 +94,6 @@ def superdebugger(debug_text): #Treure per entrega
     if args.d:
         print("SUPERDEBUGGER -----------------> "+debug_text)
 
-class PDU(Structure):
-    _fields_ = [
-        ('tipus', c_ubyte),
-        ('nom', c_char*7),
-        ('MAC', c_char*13),
-        ('aleatori', c_char*7),
-        ('dades', c_char*50)
-    ]
-
 def authorised(p):
     for i in equips_dat:
         if i['nom'] == p.nom:
@@ -92,13 +101,13 @@ def authorised(p):
     return False, {}
 
 def nack_pdu_send(addr, udp_sock, message):
-    nack_pdu = PDU(tipus=0x02, nom='', MAC='', aleatori='', dades= message)
+    nack_pdu = udp_PDU(tipus=0x02, nom='', MAC='', aleatori='', dades= message)
     udp_sock.sendto(nack_pdu, addr)
 
 def correct_data(addr, udp_sock, p, equip_dat):
     rand = random.randint(1000001,1999999)
     rand = str(rand)[1:]
-    ack_pdu = PDU(tipus=0x01, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=rand, dades=server_cfg['TCP-port'])
+    ack_pdu = udp_PDU(tipus=0x01, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=rand, dades=server_cfg['TCP-port'])
     udp_sock.sendto(ack_pdu, addr)
     actualize_equips(p.nom, 'aleatori', rand)
 
@@ -133,7 +142,7 @@ def check_state(addr, udp_sock, p, equip_dat):
             nack_pdu_send(addr, udp_sock, message)
     else:
         if p.MAC == equip_dat['MAC']  and addr[0] == equip_dat['ip']:
-            ack_pdu = PDU(tipus=0x01, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=equip_dat['aleatori'], dades='9000')
+            ack_pdu = udp_PDU(tipus=0x01, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=equip_dat['aleatori'], dades='9000')
             udp_sock.sendto(ack_pdu, addr)
             debugger(p.nom + ' segueeix en estat ' + equip_dat['estat'])
         else:
@@ -147,7 +156,7 @@ def actualize_equips(name, key, value):
         if i['nom'] == name:
             i[key] = value            
 
-def checkout_equips(name, key):
+def checkout_equip(name, key):
     for i in equips_dat:
         if i['nom'] == name:
             return i[key]
@@ -158,11 +167,11 @@ def register_petition(addr, udp_sock, p):
         check_state(addr, udp_sock, p, equip_dat)
     else:
         debugger('Petició de registre de ' + p.nom + ' rebutjada, equip no autoritat')
-        rej_pdu = PDU(tipus=0x03, nom='', MAC='', aleatori='', dades='Equip no autoritzat')
+        rej_pdu = udp_PDU(tipus=0x03, nom='', MAC='', aleatori='', dades='Equip no autoritzat')
         udp_sock.sendto(rej_pdu, addr)
     
 def attend(data, addr, udp_sock):
-    p = PDU.from_buffer_copy(data)
+    p = udp_PDU.from_buffer_copy(data)
     if p.tipus == 0x00:
         debugger('Rebuda petició de registre de ' + p.nom)
         register_petition(addr, udp_sock, p)
@@ -175,7 +184,7 @@ def ttl_register(name):
     actualize_equips(name, 'TTL', 2)    
     for i in range(j):
         time.sleep(r)
-    ttl = checkout_equips(name, 'TTL') - j
+    ttl = checkout_equip(name, 'TTL') - j
     actualize_equips(name, 'TTL', ttl)
     if ttl == 0:
         debugger(name + ' passa a estat DISCONNECTED')
@@ -183,10 +192,10 @@ def ttl_register(name):
 
 def ttl_alive(name):
     debugger('Comença temporitzacio ALIVE de '+name)
-    actualize_equips(name, 'TTL', checkout_equips(name, 'TTL')+k)
+    actualize_equips(name, 'TTL', checkout_equip(name, 'TTL')+k)
     for i in range(k):
         time.sleep(r)
-    ttl = checkout_equips(name, 'TTL') - k
+    ttl = checkout_equip(name, 'TTL') - k
     actualize_equips(name, 'TTL', ttl)
     if ttl == 0:
         debugger(name + ' passa a estat DISCONNECTED')
@@ -197,31 +206,31 @@ def alive_inf(addr, udp_sock, p):
     if (auth and (equip_dat['estat'] == 'ALIVE' or  equip_dat['estat'] == 'REGISTERED')
     and equip_dat['MAC'] == p.MAC and addr[0] == equip_dat['ip'] and 
     p.aleatori == equip_dat['aleatori'] ):
-        alive_ack_pdu = PDU(tipus=0x011, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=equip_dat['aleatori'], dades='')
+        alive_ack_pdu = udp_PDU(tipus=0x011, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=equip_dat['aleatori'], dades='')
         udp_sock.sendto(alive_ack_pdu, addr)
         if equip_dat['estat'] == 'REGISTERED':
             actualize_equips(p.nom, 'estat', 'ALIVE')
             debugger(p.nom + ' passa a estat ALIVE')
 
-            debugger("Creat thread per gestionar comunicació TCP")
-            threading.Thread(target = TCP_communication, args = (addr ,p,)).start()
+            #debugger("Creat thread per gestionar comunicació TCP")
+            #threading.Thread(target = check_TCP_connexions, args = (addr ,p,)).start()
 
 
         threading.Thread(target = ttl_alive, args=(equip_dat['nom'],)).start()
     elif  not auth  or (equip_dat['estat'] != 'ALIVE' and  equip_dat['estat'] != 'REGISTERED'):
         message = 'Equip no autoritzat o no registrat'
         debugger('Alive_inf de '+p.nom+' rebutjat:' + message)
-        alive_rej_pdu = PDU(tipus=0x013, nom='', MAC='', aleatori='', dades=message)
+        alive_rej_pdu = udp_PDU(tipus=0x013, nom='', MAC='', aleatori='', dades=message)
         udp_sock.sendto(alive_rej_pdu, addr)
     elif addr[0] != equip_dat['ip'] or p.aleatori != equip_dat['aleatori']:
         message = 'Nombre aleatori o ip no concorden'
         debugger('Alive_inf de '+p.nom+' denegat:' + message)
-        alive_nack_pdu = PDU(tipus=0x012, nom='', MAC='', aleatori='', dades=message)
+        alive_nack_pdu = udp_PDU(tipus=0x012, nom='', MAC='', aleatori='', dades=message)
         udp_sock.sendto(alive_nack_pdu, addr)
     else:
         message = 'Paquet amb format incorrecte'
         debugger(message)
-        err_pdu = PDU(tipus=0x09, nom='', MAC='', aleatori='', dades=message)
+        err_pdu = udp_PDU(tipus=0x09, nom='', MAC='', aleatori='', dades=message)
         udp_sock.sendto(err_pdu, addr)
 
 def console():
@@ -263,13 +272,145 @@ def sigint_handler(signum, frame):
     udp_sock.close()
     exit(-1)
 
-def TCP_communication(addr, p):
-    superdebugger("HOLA SÓC EL THREAD DE COMUNICACÓ TCP!")
-    #con_sock, addr = tcp_sock.accept()
-    #superdebugger("Connexió TCP amb " + p.nom + " acceptada")
+def send_file(connex_sock, t, tcp_addr, sending, getting):
+    debugger("Rebuda petició d'enviament d'arxiu de configuració")
+    if (authorised(t) and checkout_equip(t.nom,'estat') == 'ALIVE' and 
+    checkout_equip(t.nom,'MAC') == t.MAC and t.aleatori == checkout_equip(t.nom,'aleatori') and
+    tcp_addr[0] == checkout_equip(t.nom, 'ip') and not sending and not getting):
+        debugger("Tot correcte per SEND_CONF!")
+        ack_tcp_pdu = tcp_PDU(tipus=0x21, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=t.aleatori, dades= t.nom+".cfg")
+        connex_sock.send(ack_tcp_pdu)
+        return True
+    elif (not authorised(t) or checkout_equip(t.nom,'MAC') != t.MAC or 
+          checkout_equip(t.nom,'estat') == 'ALIVE'):
+        message = "Paquet rebutjat per equip no autoritzat, MAC no corresponent o equip no registrat"
+        debugger(message)
+        rej_tcp_pdu = tcp_PDU(tipus=0x23, nom='', MAC='000000000000', aleatori='000000', dades= message)
+        connex_sock.send(rej_tcp_pdu)
+        return False
+    else:
+        message = "Paquet denegat, ip no concorda, error en el número aleatori o aquest quip ja 'està efectuant una operació similar"
+        debugger(message)
+        nack_tcp_pdu = tcp_PDU(tipus=0x22, nom='', MAC='000000000000', aleatori='000000', dades= message)
+        connex_sock.send(nack_tcp_pdu)
+        return False
+
+def get_file(connex_sock, t, tcp_addr, sending, getting):
+
+    if (authorised(t) and checkout_equip(t.nom,'estat') == 'ALIVE' and 
+    checkout_equip(t.nom,'MAC') == t.MAC and t.aleatori == checkout_equip(t.nom,'aleatori') and
+    tcp_addr[0] == checkout_equip(t.nom, 'ip') and not sending and not getting):
+        debugger("TOT CORRECTE PER GET_CONF!")
+        ack_tcp_pdu = tcp_PDU(tipus=0x31, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=t.aleatori, dades= t.nom+".cfg")
+        connex_sock.send(ack_tcp_pdu)
+        return True
+    elif (not authorised(t) or checkout_equip(t.nom,'MAC') != t.MAC or 
+          checkout_equip(t.nom,'estat') == 'ALIVE'):
+        message = "Paquet rebutjat per equip no autoritzat, MAC no corresponent o equip no registrat"
+        debugger(message)
+        rej_tcp_pdu = tcp_PDU(tipus=0x33, nom='', MAC='000000000000', aleatori='000000', dades= message)
+        connex_sock.send(rej_tcp_pdu)
+        return False
+    else:
+        message = "Paquet denegat, ip no concorda, error en el número aleatori o aquest quip ja 'està efectuant una operació similar"
+        debugger(message)
+        nack_tcp_pdu = tcp_PDU(tipus=0x32, nom='', MAC='000000000000', aleatori='000000', dades= message)
+        connex_sock.send(nack_tcp_pdu)
+        return False
+
+def client_sending(connex_sock, t):
+    f = open(t.nom+".cfg", 'w')
+    while True:
+        readable, [], [] = select.select([connex_sock],[],[],w)
+        if readable != []:    
+            tcp_data = connex_sock.recv(178)
+            rebut = tcp_PDU.from_buffer_copy(tcp_data)
+            if rebut.tipus == 0x24:
+                debugger("Obtinguda línia de configuració")
+                f.write(rebut.dades)
+            elif rebut.tipus == 0x25:
+                debugger("Obtingut final d'enviament de configuració")
+                f.close()
+                return True
+            else:
+                debugger("Error al obtenir paquet TCP")
+                f.close()
+                return False
+        else:
+            debugger("El temps d'espera per rebre dades de configuració ha expirat")
+            f.close()
+            return False
+
+def client_getting(connex_sock, t):
+    f = open(t.nom+".cfg", 'r')
+    lines = f.readlines()
+
+    for line in lines:
+        data_tcp_pdu = tcp_PDU(tipus=0x34, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=t.aleatori, dades= line)
+        connex_sock.send(data_tcp_pdu)
+        debugger("Enviada línia de l'arxiu de configuració a " + t.nom)
+
     
-    #con_sock.close()
-    superdebugger("Tancada connexió TCP amb " + p.nom)
+    data_tcp_pdu = tcp_PDU(tipus=0x35, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=t.aleatori, dades= '')
+    connex_sock.send(data_tcp_pdu)
+    debugger("Enviat GET_END a " + t.nom)
+    f.close()
+
+
+def attend_TCP_connexion():
+    connex_sock, tcp_addr = tcp_sock.accept()
+    debugger("Connexió TCP acceptada")
+    data = connex_sock.recv(178)        
+    t = tcp_PDU.from_buffer_copy(data)
+    sending = False
+    getting = False
+    if t.tipus == 0x20:
+        sending = send_file(connex_sock, t, tcp_addr, sending, getting)
+        if not sending:
+            debugger("Tancant connexió TCP")
+            connex_sock.close()
+            return 0
+        if not client_sending(connex_sock, t):
+            debugger("Tancant connexió TCP")
+            connex_sock.close()
+            return 0
+
+    elif t.tipus == 0x30:
+        debugger("Rebuda petició d'obtenció d'arxiu de configuració")
+        if not os.path.exists(t.nom+".cfg"):
+            message = "No existeix arxiu de configuració d'aquest equip!"
+            debugger(message)
+            rej_tcp_pdu = tcp_PDU(tipus=0x33, nom='', MAC='000000000000', aleatori='000000', dades= message)
+            connex_sock.send(rej_tcp_pdu)
+            connex_sock.close()
+            return 0
+        else:
+            getting = get_file(connex_sock, t, tcp_addr, sending, getting)
+            if not getting:
+                debugger("Tancant connexió TCP")
+                connex_sock.close()
+                return 0
+            if not client_getting(connex_sock, t):
+                debugger("Tancant connexió TCP")
+                connex_sock.close()
+
+    else:
+        debugger("PAQUET TCP NO ACCEPTAT")
+        rej_tcp_pdu = tcp_PDU(tipus=0x09, nom='', MAC='', aleatori='', dades= "message")
+        connex_sock.send(rej_tcp_pdu)
+
+
+    debugger("Tancant connexió TCP")
+    connex_sock.close()
+
+def check_TCP_connexions():
+    try:
+        readable, [], [] = select.select([tcp_sock],[],[],0.0)
+    except ValueError:
+            exit(-1)
+    if readable != []:    
+        debugger("Creat thread per gestionar comunicació TCP")
+        threading.Thread(target= attend_TCP_connexion).start()
 
 
 if __name__ == '__main__':
@@ -287,7 +428,6 @@ if __name__ == '__main__':
     tcp_sock.bind(("", int(server_cfg['TCP-port'])))
     debugger("Socket TCP obert")
     a = tcp_sock.listen(l)
-    superdebugger("LISTEN FET: " + str(a))
 
     signal.signal(signal.SIGINT, sigint_handler)
     threading.Thread(target=console).start()
@@ -295,8 +435,10 @@ if __name__ == '__main__':
     debugger("Inici de bucle de servei infinit")
     try:
          while True:
-            data, addr = udp_sock.recvfrom(78)
-            attend(data,addr, udp_sock)
+            data, addr = udp_sock.recvfrom(78) #Canviar a no bloquejant 
+            attend(data,addr, udp_sock) 
+            check_TCP_connexions()
+
     finally:
         quit = True
         udp_sock.close()
