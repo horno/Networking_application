@@ -41,6 +41,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Server side of a client-server communication')
     parser.add_argument('-c', help = 'New route to the configuration file')
     parser.add_argument('-d', help = 'Activates the debugger flag', action = "store_true")
+    parser.add_argument('-u', help = 'New route to the authorized clients file')
     args = parser.parse_args()
     return args
 
@@ -74,7 +75,14 @@ def extract_cfg_data():
     return server_cfg
 
 def extract_equips_dat():
-    f = open('equips.dat', 'r')
+    if args.u:
+        equips = args.u
+    else:
+        equips = "equips.dat"
+    if not os.path.exists(equips):
+        print("File not found")
+        exit(-1)
+    f = open(equips, 'r')
     i = 0
     equips_dat = []
     line = f.readline()
@@ -411,7 +419,11 @@ def check_TCP_connexions():
     if readable != []:    
         debugger("Creat thread per gestionar comunicació TCP")
         threading.Thread(target= attend_TCP_connexion).start()
-
+def check_UDP_buffer(udp_sock):
+    readable, [], [] = select.select([udp_sock],[],[],0.0)
+    if readable != []:    
+        data, addr = udp_sock.recvfrom(78)
+        attend(data,addr, udp_sock)
 
 if __name__ == '__main__':
     args = parse_arguments()
@@ -435,8 +447,7 @@ if __name__ == '__main__':
     debugger("Inici de bucle de servei infinit")
     try:
          while True:
-            data, addr = udp_sock.recvfrom(78) #Canviar a no bloquejant 
-            attend(data,addr, udp_sock) 
+            check_UDP_buffer(udp_sock)
             check_TCP_connexions()
 
     finally:
