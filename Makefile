@@ -1,5 +1,3 @@
-
-
 #
 #
 LDFLAGS= -Wall -ansi -pedantic       
