@@ -1,6 +1,7 @@
 		-- Pràctica 1 de xarxes --
 
-	-0 Tinc problemes de tancar el socket TCP al servidor
+	-0 Comentar problema de getconf i REUSEADDR
+	-0 Comentar dilema entre sleep i select d's segons al registre 
 	-1 Printar canvis d'estat per stderr (o stdin), no sol
 	   per debug
 

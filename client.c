@@ -602,13 +602,9 @@ int register_req(int debug, struct meta_struct *metastruct)
 	metastruct->tosend_UDP_pack.tipus_paquet = 0x00;
 	strcpy(metastruct->tosend_UDP_pack.num_aleatori,"000000");
 
-	debugger(debug, "Començant procés de registre");
-	answ = register_process(fdset, timeout, debug, metastruct);
-	for(i = 0; i<(q-1) && answ != 1; i++)
+	
+	for(i = 0; i<(q) && answ != 1; i++)
 	{
-		debugger(debug, "PROCÉS DE REGISTRE FET, ESPERANT PEL SEGÜENT");			
-		sleep(s);
-		
 		debugger(debug, "Començant procés de registre");
 		answ = register_process(fdset, timeout, debug, metastruct);
 	}
@@ -637,14 +633,23 @@ int register_process(fd_set fdset, struct timeval timeout, int debug,
 	fprintf(stderr, "ESTAT: WAIT_REG\n");
 	for(i = 1; i<p && answ == 0;i++)
 	{
-		if(i>n && (i-n+1)<=m)
+		if(i>=n && (i-n)<m-1)
 		{
 			h++;
 		}
 		timeout.tv_sec = h*t;
     	answ = select_process(debug, fdset, timeout, metastruct);
 	}
-	return answ;
+	if(answ != 0)
+	{
+		return answ;
+	}
+	else
+	{
+		timeout.tv_sec = s;
+		answ = select_process(debug, fdset, timeout, metastruct);
+		return answ;
+	}
 }
 
 /* Espera la recepeció d'un paquet per UDP el temps establert (per timeout) amb select, 
