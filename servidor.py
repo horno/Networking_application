@@ -491,7 +491,7 @@ if __name__ == '__main__':
     debugger("Socket UDP obert")
 
     tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    tcp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) #TODO: Treure-ho
+    #tcp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) #TODO: Treure-ho
     tcp_sock.bind(("", int(server_cfg['TCP-port'])))
     debugger("Socket TCP obert")
     a = tcp_sock.listen(l)
