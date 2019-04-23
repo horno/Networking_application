@@ -61,6 +61,29 @@
 \subsection{Estructura del servidor}
 \section{Manteniment de comunicació}
 \subsection{Manteniment de comunicació del client}
+
+Una vegada el client s'ha registrat, passa a la fase de manteniment
+de comunicació amb el servidor. Per entendre l'estratègia emprada
+primer s'ha d'introduir unes variables importants. La primera
+és \textbf{intent}, una variable de tipus enter que s'inicialitzarà a
+0 i anirà canviant de valor en funció dels paquets que li arribin (o li
+deixin d'arribar). \textbf{Intent} ajudarà a sortir en el moment adient
+del bucle principal d'enviament d'ALIVE\textunderscore INF com, per 
+exemple, quan es rep un ALIVE\textunderscore REJ (es veuran tots els 
+demés casos més endavant).
+
+
+
+
+
+
+
+
+
+
+
+
+
 \subsection{Manteniment de comunicació del servidor}
 \section{Diagrama d'estats UDP}
 \section{Consideracions}

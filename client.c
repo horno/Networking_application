@@ -55,7 +55,7 @@ struct PDU_TCP_package{
 	char dades[150];
 };
 
-/* Estructura que serveix per guardar estructures i elements de frequent ús 
+/* Estructura que serveix per guardar estructures intent elements de frequent ús 
    per evitar capçaleres de funcions excessivament llargues */
 struct meta_struct{
 	int sock;
@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
 
 
 	debugger(debug, "Opening UDP socket");
-	/* Obra socket UDP */
+	/* Obre socket UDP */
 	if((metastruct.sock = socket(AF_INET,SOCK_DGRAM,0))<0)
 	{
 		perror("Error al obrir el socket UDP:");
@@ -175,7 +175,7 @@ void close_commandline(int fdcli[2])
 
 /* Amb l'ajuda d'un select (per a que no sigui bloquejant), mira si s'ha rebut
    informació des del procés de la consola. Si la informació obtinguda és "quit",
-   procedeix a tancar el socket i el procés */
+   procedeix a tancar el socket intent el procés */
 void check_console_command(int sock, int fdcons[2])
 {
 	char buff[20];
@@ -197,8 +197,8 @@ void check_console_command(int sock, int fdcons[2])
 	}
 }
 
-/* Crea 2 pipes i crea un fill mitjançant la crida fork(). fdcons és el descriptor
-   de fitxer que utilitzarà el procés fill per enviar dades al pare, i fdcli és 
+/* Crea 2 pipes intent crea un fill mitjançant la crida fork(). fdcons és el descriptor
+   de fitxer que utilitzarà el procés fill per enviar dades al pare, intent fdcli és 
    el que utilitzarà el pare per enviar dades al fill*/
 void fork_console(int debug, struct console_needs *console_struct)
 {
@@ -286,7 +286,7 @@ void console(int debug, struct console_needs console_struct)
 }
 
 /* Mètode que envia el paquet d'obtenció de configuració, tracta la resposta del
-   servidor, i afegeix les dades de configuració al fitxer pertinent */
+   servidor, intent afegeix les dades de configuració al fitxer pertinent */
 void getconf(int debug, struct console_needs console_struct)
 {
 	struct PDU_TCP_package send_tcp_pack;
@@ -329,7 +329,7 @@ void getconf(int debug, struct console_needs console_struct)
 	close(sockfd);
 }
 
-/* Bucle que controla la cadència de dades rebudes pel socket TCP i col·loca les
+/* Bucle que controla la cadència de dades rebudes pel socket TCP intent col·loca les
    dades a l'arxiu de configuració correcte */
 void get_and_save_conf(int debug, int sockfd, FILE* fp)
 {
@@ -498,7 +498,7 @@ void send_data(int debug, int sockfd, struct PDU_TCP_package send_tcp_pack, FILE
 /* Funció que s'encarrega de tota la part d'alve del client*/
 void alive(int debug, struct meta_struct *metastruct, struct console_needs *console_struct)
 {
-	int i = 0;
+	int intent = 0; 
 	int first = 1;
 	fd_set fdset;
 	struct timeval timeout;
@@ -506,7 +506,7 @@ void alive(int debug, struct meta_struct *metastruct, struct console_needs *cons
 	metastruct->tosend_UDP_pack.tipus_paquet = 0x10;
 	strcpy(metastruct->tosend_UDP_pack.num_aleatori,
 					metastruct->recv_reg_UDP.num_aleatori);
-	while(i < u)
+	while(intent < u)
 	{
 		debugger(debug, "Enviat ALIVE_INF");
 		send_UDP_pack(debug, metastruct);
@@ -522,7 +522,7 @@ void alive(int debug, struct meta_struct *metastruct, struct console_needs *cons
     	if(select(metastruct->sock+1, &fdset, NULL, NULL, &timeout) == 0)
 		{
 			debugger(debug, "No s'ha rebut resposta a ALIVE_INF");
-			i++;
+			intent++;
 		}
 		else
 		{
@@ -530,7 +530,7 @@ void alive(int debug, struct meta_struct *metastruct, struct console_needs *cons
 			if(UDP_answer_treatment(debug, recv_alive_UDP, metastruct->sock) == 1 && 
 			   authenticate_alive(debug, metastruct->recv_reg_UDP,recv_alive_UDP) == 0)
 			{
-				i = 0;
+				intent = 0;
 				if(first == 1)
 				{
 					pass_info(console_struct,*metastruct);
@@ -543,13 +543,13 @@ void alive(int debug, struct meta_struct *metastruct, struct console_needs *cons
 			else if(UDP_answer_treatment(debug, recv_alive_UDP, metastruct->sock) == 2 &&
 					 authenticate_alive(debug, metastruct->recv_reg_UDP,recv_alive_UDP) == 0)
 			{
-				i = u;
+				intent = u;
 				debugger(debug, "Rebut ALIVE_REJ correcte, intent de suplantació d'indentitat");
 				fprintf(stderr, "ESTAT: DISCONNECTED");
 			}
 			else
 			{
-				i++;
+				intent++;
 			}
 		}
 	}
@@ -569,8 +569,8 @@ void pass_info(struct console_needs *console_struct, struct meta_struct metastru
 	
 	console_struct->s_addr = metastruct.addr_server.sin_addr.s_addr;
 }
-/* Donat el paquet UDP obtingut al registre, i un paquet UDP obtingut en l'alive, retorna
-   1 si el paquet alive no correspón (no està autoritzat) al registrat, i 0 altrament */
+/* Donat el paquet UDP obtingut al registre, intent un paquet UDP obtingut en l'alive, retorna
+   1 si el paquet alive no correspón (no està autoritzat) al registrat, intent 0 altrament */
 int authenticate_alive(int debug,struct PDU_UDP_package register_pack,
 					   struct PDU_UDP_package alive_pack)
 {
@@ -591,7 +591,7 @@ int authenticate_alive(int debug,struct PDU_UDP_package register_pack,
 /* Funció que s'encarrega de tot el registre del client */
 int register_req(int debug, struct meta_struct *metastruct)
 {
-	int i;
+	int intent;
 	int answ = 0;
 	struct timeval timeout;
 
@@ -603,7 +603,7 @@ int register_req(int debug, struct meta_struct *metastruct)
 	strcpy(metastruct->tosend_UDP_pack.num_aleatori,"000000");
 
 	
-	for(i = 0; i<(q) && answ != 1; i++)
+	for(intent = 0; intent<(q) && answ != 1; intent++)
 	{
 		debugger(debug, "Començant procés de registre");
 		answ = register_process(fdset, timeout, debug, metastruct);
@@ -624,16 +624,16 @@ int register_req(int debug, struct meta_struct *metastruct)
 int register_process(fd_set fdset, struct timeval timeout, int debug,
                     struct meta_struct *metastruct)
 {
-	int i;
+	int intent;
 	int h = 1;
 	int answ = 0;
 	timeout.tv_sec = t;
 	send_UDP_pack(debug, metastruct);
 	debugger(debug, "Enviat REGISTER_REQ");
 	fprintf(stderr, "ESTAT: WAIT_REG\n");
-	for(i = 1; i<p && answ == 0;i++)
+	for(intent = 1; intent<p && answ == 0;intent++)
 	{
-		if(i>=n && (i-n)<m-1)
+		if(intent>=n && (intent-n)<m-1)
 		{
 			h++;
 		}
@@ -654,7 +654,7 @@ int register_process(fd_set fdset, struct timeval timeout, int debug,
 
 /* Espera la recepeció d'un paquet per UDP el temps establert (per timeout) amb select, 
    si no es rep res, torna a enviar una petició de registre, si rep un paquet
-   el tracta amb la funció UDP_answer_treatment, i retorna un sencer per a que la funció
+   el tracta amb la funció UDP_answer_treatment, intent retorna un sencer per a que la funció
    que l'ha cridat sapigui quina acció fer */
 int select_process(int debug, fd_set fdset, struct timeval timeout,
                      struct meta_struct *metastruct)
@@ -733,7 +733,7 @@ void debugger(int debug, char message[])
 	}
 }
 
-/* Llegeix el paquet pel canal UDP i el retorna */
+/* Llegeix el paquet pel canal UDP intent el retorna */
 struct PDU_UDP_package recvfrom_UDP(int sock)
 {
 	struct PDU_UDP_package recv_reg_UDP;
@@ -759,7 +759,7 @@ void send_UDP_pack(int debug, struct meta_struct *metastruct)
 	}
 }
 
-/* Omple l'estructura de l'adreça del servidor i l'estructura del paquet UDP a enviar */
+/* Omple l'estructura de l'adreça del servidor intent l'estructura del paquet UDP a enviar */
 void fill_structures(struct cfg_data dataconfig, struct hostent *ent, 
 							  struct meta_struct *metastruct)
 {
@@ -778,7 +778,7 @@ void fill_structures(struct cfg_data dataconfig, struct hostent *ent,
 }
 
 /* Agafa la informació de l'arxiu de configuració per ficar-la en la estructura pertinent
-   i retornar aquesta */
+   intent retornar aquesta */
 struct cfg_data collect_config_data(char cfg_file[])
 {
 	FILE *fpointer;
