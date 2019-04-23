@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2019.4.6)  23 APR 2019 22:07
+This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2019.4.6)  24 APR 2019 00:23
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -572,26 +572,56 @@ Underfull \hbox (badness 10000) in paragraph at lines 209--215
  []
 
 
-Overfull \hbox (42.35733pt too wide) in paragraph at lines 247--248
+Overfull \hbox (37.796pt too wide) in paragraph at lines 238--238
+ []\OT1/cmr/m/n/10 REGISTER[]REJ/ 
+ []
+
+
+Overfull \hbox (38.9878pt too wide) in paragraph at lines 238--238
+ []\OT1/cmr/m/n/10 comunicaci^^Sofallida 
+ []
+
+
+Overfull \hbox (16.89322pt too wide) in paragraph at lines 240--240
+ []\OT1/cmr/m/n/10 ALIVE[]REJ/ 
+ []
+
+
+Overfull \hbox (38.9878pt too wide) in paragraph at lines 240--240
+ []\OT1/cmr/m/n/10 comunicaci^^Sofallida 
+ []
+
+
+Overfull \hbox (16.89322pt too wide) in paragraph at lines 242--242
+ []\OT1/cmr/m/n/10 ALIVE[]REJ/ 
+ []
+
+
+Overfull \hbox (38.9878pt too wide) in paragraph at lines 242--242
+ []\OT1/cmr/m/n/10 comunicaci^^Sofallida 
+ []
+
+
+Overfull \hbox (71.59773pt too wide) in paragraph at lines 247--248
 [] 
  []
 
 [4] [5] [6] (./docu.aux) ) 
 Here is how much of TeX's memory you used:
- 14593 strings out of 494587
- 304768 string characters out of 6177760
- 364849 words of memory out of 5000000
- 17982 multiletter control sequences out of 15000+600000
+ 14595 strings out of 494587
+ 304805 string characters out of 6177760
+ 364847 words of memory out of 5000000
+ 17984 multiletter control sequences out of 15000+600000
  5457 words of font info for 20 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 55i,6n,82p,443b,677s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 55i,6n,82p,443b,690s stack positions out of 5000i,500n,10000p,200000b,80000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/ams
 fonts/cm/cmbx10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/
 cm/cmbx12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr
 10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb>
 </usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/s
 hare/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb>
-Output written on docu.pdf (8 pages, 91686 bytes).
+Output written on docu.pdf (8 pages, 92087 bytes).
 PDF statistics:
  82 PDF objects out of 1000 (max. 8388607)
  49 compressed objects within 1 object stream

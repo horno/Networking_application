@@ -233,16 +233,13 @@ amb els clients necessaris de forma concurrent per part del servidor.
 \node[v](R)at(5,-5){\textbf{REGISTERED}};
 \node[v](A)at(0,0){\textbf{ALIVE}};
 
-%\draw[e](D)--[bend left](W);
-\draw[e](D) to [bend left,looseness=1] node[above] {asd} (W);
-\draw[e](W) to [bend left,looseness=1] node[above] {asd} (D);
-\draw[e](R) to [bend left,looseness=1] node[above] {asd} (A);
-\draw[e](A) to [bend left,looseness=1] node[above] {asd} (D);
-\draw[e](W) to [bend left,looseness=1] node[above] {asd} (R);
-\draw[e](W) to  node[above] {asd} (A);
 
-
-
+\draw[e](D) to [bend left,looseness=1] node[above, xshift=2cm] {1r paquet REGISTER\_REQ} (W);
+\draw[e](W) to [bend left,looseness=1] node[above, yshift=0.5cm, xshift=-0.2cm, rotate= -40] {\parbox{1.5cm}{\centering REGISTER\_REJ/ \\ comunicació\,fallida} } (D);
+\draw[e](R) to [bend left,looseness=1] node[above, xshift=-1.7cm] {1r ALIVE\_ACK} (A);
+\draw[e](A) to [bend left,looseness=1] node[above, xshift=-2.3cm] {\parbox{1.5cm}{\centering ALIVE\_REJ/ \\ comunicació\,fallida} } (D);
+\draw[e](W) to [bend left,looseness=1] node[above, xshift=1.7cm, yshift=-0.5cm] {REGISTER\_ACK} (R);
+\draw[e](R) to  node[above, xshift=-2.16cm,yshift=-1cm] {\parbox{1.5cm}{\centering ALIVE\_REJ/ \\ comunicació\,fallida} } (D);
 
 \end{tikzpicture}
 
