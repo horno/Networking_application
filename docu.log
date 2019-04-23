@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2019.4.6)  23 APR 2019 20:27
+This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2019.4.6)  23 APR 2019 22:07
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -358,17 +358,52 @@ File: tikzlibraryfadings.code.tex 2009/11/15 v3.0.1a (rcs-revision 1.2)
 (/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/pgflibraryfadings.code
 .tex
 File: pgflibraryfadings.code.tex 2008/02/07 v3.0.1a (rcs-revision 1.3)
-))) (/usr/share/texlive/texmf-dist/tex/latex/float/float.sty
+)))
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tik
+zlibraryautomata.code.tex
+File: tikzlibraryautomata.code.tex 2008/07/14 v3.0.1a (rcs-revision 1.3)
+
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tik
+zlibraryshapes.multipart.code.tex
+File: tikzlibraryshapes.multipart.code.tex 2008/01/09 v3.0.1a (rcs-revision 1.1
+)
+
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/shapes/pgflibraryshape
+s.multipart.code.tex
+File: pgflibraryshapes.multipart.code.tex 2010/01/07 v3.0.1a (rcs-revision 1.2)
+
+\pgfnodepartlowerbox=\box37
+\pgfnodeparttwobox=\box38
+\pgfnodepartthreebox=\box39
+\pgfnodepartfourbox=\box40
+\pgfnodeparttwentybox=\box41
+\pgfnodepartnineteenbox=\box42
+\pgfnodeparteighteenbox=\box43
+\pgfnodepartseventeenbox=\box44
+\pgfnodepartsixteenbox=\box45
+\pgfnodepartfifteenbox=\box46
+\pgfnodepartfourteenbox=\box47
+\pgfnodepartthirteenbox=\box48
+\pgfnodeparttwelvebox=\box49
+\pgfnodepartelevenbox=\box50
+\pgfnodeparttenbox=\box51
+\pgfnodepartninebox=\box52
+\pgfnodeparteightbox=\box53
+\pgfnodepartsevenbox=\box54
+\pgfnodepartsixbox=\box55
+\pgfnodepartfivebox=\box56
+)))
+(/usr/share/texlive/texmf-dist/tex/latex/float/float.sty
 Package: float 2001/11/08 v1.3d Float enhancements (AL)
 \c@float@type=\count107
 \float@exts=\toks29
-\float@box=\box37
+\float@box=\box57
 \@float@everytoks=\toks30
-\@floatcapt=\box38
+\@floatcapt=\box58
 )
 (/usr/share/texlive/texmf-dist/tex/latex/listings/listings.sty
 \lst@mode=\count108
-\lst@gtempboxa=\box39
+\lst@gtempboxa=\box59
 \lst@token=\toks31
 \lst@length=\count109
 \lst@currlwidth=\dimen152
@@ -384,7 +419,7 @@ Package: float 2001/11/08 v1.3d Float enhancements (AL)
 File: lstmisc.sty 2015/06/04 1.6 (Carsten Heinz)
 \c@lstnumber=\count114
 \lst@skipnumbers=\count115
-\lst@framebox=\box40
+\lst@framebox=\box60
 )
 (/usr/share/texlive/texmf-dist/tex/latex/listings/listings.cfg
 File: listings.cfg 2015/06/04 1.6 listings configuration
@@ -410,7 +445,7 @@ LaTeX Font Info:    ... okay on input line 58.
 [Loading MPS to PDF converter (version 2006.09.02).]
 \scratchcounter=\count116
 \scratchdimen=\dimen156
-\scratchbox=\box41
+\scratchbox=\box61
 \nofMPsegments=\count117
 \nofMParguments=\count118
 \everyMPshowfont=\toks32
@@ -489,72 +524,77 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 \openout4 = `docu.toc'.
 
  [1] [1] [2]
-Underfull \hbox (badness 10000) in paragraph at lines 143--153
+Underfull \hbox (badness 10000) in paragraph at lines 127--137
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 154--160
+Underfull \hbox (badness 10000) in paragraph at lines 138--144
 
  []
 
-LaTeX Font Info:    Try loading font information for OMS+cmr on input line 170.
+LaTeX Font Info:    Try loading font information for OMS+cmr on input line 154.
 
 (/usr/share/texlive/texmf-dist/tex/latex/base/omscmr.fd
 File: omscmr.fd 2014/09/29 v2.5h Standard LaTeX font definitions
 )
 LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 170.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 154.
 
-Underfull \hbox (badness 10000) in paragraph at lines 192--196
+Underfull \hbox (badness 10000) in paragraph at lines 176--180
 
  []
 
 [3]
-Underfull \hbox (badness 10000) in paragraph at lines 197--206
+Underfull \hbox (badness 10000) in paragraph at lines 181--190
 
  []
 
 
-Overfull \hbox (6.09317pt too wide) in paragraph at lines 207--213
+Overfull \hbox (6.09317pt too wide) in paragraph at lines 191--197
 \OT1/cmr/m/n/10 tides en-tre threads d'un mateix proc^^Ses; i la in-for-maci^^S
 o dels clients (on s'actualitzen
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 207--213
+Underfull \hbox (badness 10000) in paragraph at lines 191--197
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 214--218
+Underfull \hbox (badness 10000) in paragraph at lines 198--202
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 225--231
+Underfull \hbox (badness 10000) in paragraph at lines 209--215
 
  []
 
-[4] [5] (./docu.aux) ) 
+
+Overfull \hbox (42.35733pt too wide) in paragraph at lines 247--248
+[] 
+ []
+
+[4] [5] [6] (./docu.aux) ) 
 Here is how much of TeX's memory you used:
- 13958 strings out of 494587
- 283310 string characters out of 6177760
- 334801 words of memory out of 5000000
- 17356 multiletter control sequences out of 15000+600000
+ 14593 strings out of 494587
+ 304768 string characters out of 6177760
+ 364849 words of memory out of 5000000
+ 17982 multiletter control sequences out of 15000+600000
  5457 words of font info for 20 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 55i,6n,82p,433b,607s stack positions out of 5000i,500n,10000p,200000b,80000s
-</usr/share/texlive/texmf-dist/fonts/type1/public/amsfont
-s/cm/cmbx10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/c
-mbx12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.p
-fb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></us
-r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/share
-/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb>
-Output written on docu.pdf (7 pages, 87495 bytes).
+ 55i,6n,82p,443b,677s stack positions out of 5000i,500n,10000p,200000b,80000s
+</usr/share/texlive/texmf-dist/fonts/type1/public/ams
+fonts/cm/cmbx10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/
+cm/cmbx12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr
+10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb>
+</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/s
+hare/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb>
+Output written on docu.pdf (8 pages, 91686 bytes).
 PDF statistics:
- 79 PDF objects out of 1000 (max. 8388607)
- 47 compressed objects within 1 object stream
+ 82 PDF objects out of 1000 (max. 8388607)
+ 49 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  109 words of extra memory for PDF output out of 10000 (max. 10000000)
 

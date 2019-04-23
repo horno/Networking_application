@@ -5,4 +5,4 @@
 \contentsline {subsection}{\numberline {2.1}Manteniment de comunicaci\IeC {\'o} del client}{3}
 \contentsline {subsection}{\numberline {2.2}Manteniment de comunicaci\IeC {\'o} del servidor}{3}
 \contentsline {section}{\numberline {3}Diagrama d'estats UDP}{5}
-\contentsline {section}{\numberline {4}Consideracions}{5}
+\contentsline {section}{\numberline {4}Consideracions}{6}

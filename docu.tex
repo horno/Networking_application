@@ -2,7 +2,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage{tikz}
-\usetikzlibrary{shapes.geometric,arrows,shadows}
+\usetikzlibrary{shapes.geometric,arrows,shadows, automata}
 \usepackage{float}
 \usepackage{listings}
 
@@ -68,7 +68,6 @@ minimum height=1cm, text centered, draw=black, fill=red!30]
 
 \section{Diagrames d'estructura}
 \subsection{Estructura del client}
-
 \begin{tikzpicture}[node distance=2cm]
 \node (1)[blue]{Inicialització estructures};
 \node (2)[blue, below of=1]{Obtenció paràmetres entrada};
@@ -90,11 +89,7 @@ minimum height=1cm, text centered, draw=black, fill=red!30]
 \draw [arrow](7) -- (8);
 \draw [arrow](7) -- (9);
 \draw [arrow](9) -- (10);
-
 \end{tikzpicture}
-
-
-
 \subsection{Estructura del servidor}
 \begin{tikzpicture}[node distance=2cm]
 \node (1)[blue, xshift=2cm]{Obtenció arguments entrada i dades de configuració};
@@ -102,15 +97,13 @@ minimum height=1cm, text centered, draw=black, fill=red!30]
 \node (3)[blue, below of=2]{Bind socket UDP i TCP};
 \node (4)[blue, below of=3]{Listen TCP};
 \node (5)[blue, below of=4]{Inici bucle d'atenció UDP i TCP};
-\node (6)[blue, below left of=5, xshift=-2cm, yshift=-1cm]{Atendre petició de registre};
+\node (6)[blue, below left of=5, xshift=-2cm, yshift=-1cm]{Atendre petició de Registre};
 \node (7)[blue, below right of=5, xshift=-1cm, yshift=-1cm]{Atendre petició Alive};
 \node (8)[green, right of=7, xshift=2cm]{Creació thread atenció TCP};
 \node (9)[green, below of=8]{Acceptar connexió TCP};
 \node (10)[green, below of=9]{Atendre petició TCP};
 \node (11)[red, right of=4, xshift=34mm]{Creació thread consola};
 \node (12)[red, below of=11]{Espera de comandes per terminal};
-
-
 
 \draw [arrow](1) -- (2);
 \draw [arrow](2) -- (3);
@@ -123,17 +116,8 @@ minimum height=1cm, text centered, draw=black, fill=red!30]
 \draw [arrow](9) -- (10);
 \draw [arrow](4) -- (11);
 \draw [arrow](11) -- (12);
-
-
-
-
-
-
-
-
-
-
-
+\draw [arrow](7) -- (5);
+\draw [arrow](6) -- (5);
 \end{tikzpicture}
 \newpage
 
@@ -239,25 +223,46 @@ un ALIVE\textunderscore NACK informant-lo del motiu.
 Amb aquest sistema de TTLs s'aconsegueix mantenir la comunicació corresponent
 amb els clients necessaris de forma concurrent per part del servidor.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 \section{Diagrama d'estats UDP}
+\begin{tikzpicture}
+\tikzstyle{v} = [circle,minimum height = 36mm, draw=black]
+\tikzstyle{e} = [->, very thick]
+
+\node[v](D)at(5,5){\textbf{DISCONNECTED}};
+\node[v](W)at(10,0){\textbf{WAIT\_REG}};
+\node[v](R)at(5,-5){\textbf{REGISTERED}};
+\node[v](A)at(0,0){\textbf{ALIVE}};
+
+%\draw[e](D)--[bend left](W);
+\draw[e](D) to [bend left,looseness=1] node[above] {asd} (W);
+\draw[e](W) to [bend left,looseness=1] node[above] {asd} (D);
+\draw[e](R) to [bend left,looseness=1] node[above] {asd} (A);
+\draw[e](A) to [bend left,looseness=1] node[above] {asd} (D);
+\draw[e](W) to [bend left,looseness=1] node[above] {asd} (R);
+\draw[e](W) to  node[above] {asd} (A);
+
+
+
+
+\end{tikzpicture}
+
+
+
+\newpage
 \section{Consideracions}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 \end{document}
