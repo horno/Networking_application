@@ -2,6 +2,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows,shadows}
 \usepackage{float}
 \usepackage{listings}
 
@@ -30,12 +31,21 @@
 %Emplenar a partir d'aquí per a fer el títol : no se com es fa el package
 %S'han de renombrar totes, inclús date, si un camp es deixa en blanc no apareix
 
-\tikzset{
+%\tikzset{
 	%Style of nodes. Si poses aquí un estil es pot reutilitzar més facilment
-	pag/.style = {circle, draw=black,
-                           minimum width=0.75cm, font=\ttfamily,
-                           text centered}
-}
+%	pag/.style = {circle, draw=black,
+%                           minimum width=0.75cm, font=\ttfamily,
+%                           text centered}
+%}
+
+\tikzstyle{blue} = [rectangle, rounded corners, minimum width=3cm, text width=3cm,
+minimum height=1cm, text centered, draw=black, fill=blue!30]
+\tikzstyle{green} = [rectangle, rounded corners, minimum width=3cm, text width=3cm,
+minimum height=1cm, text centered, draw=black, fill=green!30]
+\tikzstyle{red} = [rectangle, rounded corners, minimum width=3cm, text width=3cm,
+minimum height=1cm, text centered, draw=black, fill=red!30]
+\tikzstyle{arrow} = [thick,->,>=stealth]
+
 \renewcommand{\figurename}{Figura}
 \title{Pràctica 1}
 \author{Ian Palacín Aliana}
@@ -58,33 +68,195 @@
 
 \section{Diagrames d'estructura}
 \subsection{Estructura del client}
+
+\begin{tikzpicture}[node distance=2cm]
+\node (1)[blue]{Inicialització estructures};
+\node (2)[blue, below of=1]{Obtenció paràmetres entrada};
+\node (3)[blue, below of=2]{Obtenció dades configuració};
+\node (4)[blue, below of=3]{Obrir socket UDP};
+\node (5)[blue, below of=4]{Emplenar estructures amb dades de configuració};
+\node (6)[blue, below of=5]{Registre en el servidor};
+\node (7)[blue, below of=6]{Primera resposta manteniment comunicació};
+\node (8)[blue, below left of=7,xshift=-2cm, yshift=-1cm]{Manteniment de comunicació periòdic};
+\node (9)[red, right of= 8, xshift=5cm]{Creació procés d'atenció de comandes};
+\node (10)[red, below of=9]{Espera de comandes per terminal};
+
+\draw [arrow](1) -- (2);
+\draw [arrow](2) -- (3);
+\draw [arrow](3) -- (4);
+\draw [arrow](4) -- (5);
+\draw [arrow](5) -- (6);
+\draw [arrow](6) -- (7);
+\draw [arrow](7) -- (8);
+\draw [arrow](7) -- (9);
+\draw [arrow](9) -- (10);
+
+\end{tikzpicture}
+
+
+
 \subsection{Estructura del servidor}
+\begin{tikzpicture}[node distance=2cm]
+\node (1)[blue, xshift=2cm]{Obtenció arguments entrada i dades de configuració};
+\node (2)[blue, below of=1]{Crear socket UDP i TCP};
+\node (3)[blue, below of=2]{Bind socket UDP i TCP};
+\node (4)[blue, below of=3]{Listen TCP};
+\node (5)[blue, below of=4]{Inici bucle d'atenció UDP i TCP};
+\node (6)[blue, below left of=5, xshift=-2cm, yshift=-1cm]{Atendre petició de registre};
+\node (7)[blue, below right of=5, xshift=-1cm, yshift=-1cm]{Atendre petició Alive};
+\node (8)[green, right of=7, xshift=2cm]{Creació thread atenció TCP};
+\node (9)[green, below of=8]{Acceptar connexió TCP};
+\node (10)[green, below of=9]{Atendre petició TCP};
+\node (11)[red, right of=4, xshift=34mm]{Creació thread consola};
+\node (12)[red, below of=11]{Espera de comandes per terminal};
+
+
+
+\draw [arrow](1) -- (2);
+\draw [arrow](2) -- (3);
+\draw [arrow](3) -- (4);
+\draw [arrow](4) -- (5);
+\draw [arrow](5) -- (6);
+\draw [arrow](5) -- (7);
+\draw [arrow](5) -- (8);
+\draw [arrow](8) -- (9);
+\draw [arrow](9) -- (10);
+\draw [arrow](4) -- (11);
+\draw [arrow](11) -- (12);
+
+
+
+
+
+
+
+
+
+
+
+\end{tikzpicture}
+\newpage
+
 \section{Manteniment de comunicació}
 \subsection{Manteniment de comunicació del client}
 
 Una vegada el client s'ha registrat, passa a la fase de manteniment
 de comunicació amb el servidor. Per entendre l'estratègia emprada
-primer s'ha d'introduir unes variables importants. La primera
-és \textbf{intent}, una variable de tipus enter que s'inicialitzarà a
+primer s'han d'introduir unes variables importants. La primera
+és \textbf{intent}, és el contador d'intents d'alive. Variable de tipus 
+enter que s'inicialitzarà a
 0 i anirà canviant de valor en funció dels paquets que li arribin (o li
 deixin d'arribar). \textbf{Intent} ajudarà a sortir en el moment adient
 del bucle principal d'enviament d'ALIVE\textunderscore INF com, per 
 exemple, quan es rep un ALIVE\textunderscore REJ (es veuran tots els 
-demés casos més endavant).
+altres casos més endavant).\\
 
+La segona variable a mencionar és \textbf{first}, variable de tipus enter
+però que funciona com una booleana. Aquesta variable serveix per saber si
+ja s'ha rebut el primer ALIVE\textunderscore REQ. S'inicialitza a 1 i 
+en recepció de la primera confirmació d'alive passa a 0, nombre en 
+el que es quedarà durant tota la resta de procés de manteniment 
+de comunicació.\\
 
-
-
-
-
-
-
-
-
-
-
+El procés de manteniment de comunicació consta d'un bucle principal, 
+que s'executarà mentres \textbf{intent} sigui menor a \textbf{u}, 
+el nombre màxim de temps d'alive permesos sense rebre confirmació.  
+A cada iteració del bucle s'enviarà una petició d'alive i s'esperarà
+un temps d'alive (r). Si després de l'espera no s'ha rebut resposta
+del servidor, s'incrementarà \textbf{intent} i es tornarà a dalt del
+bucle. Si després de l'espera s'ha rebut resposta, aquesta es tractarà
+de la següent manera:
+\begin{itemize}
+\item Si la resposta és un ALIVE\textunderscore ACK 
+del servidor corresponent, es ficarà el contador d'intents a 0 de 
+nou, d'aquesta manera es podran tornar a permetre \textbf{r} 
+ALIVE\textunderscore INF sense resposta. Si \textbf{first} té el
+valor 1 voldrà dir que és la primera confirmació d'alive i, per tant
+, el client canviarà d'estat registrat a alive. En aquest moment és
+també quan es crea el procés de consola. 
+\item La recepció d'un ALIVE\textunderscore REJ del servidor corresponent
+es considerarà com suplantació d'identitat i es ficarà el contador 
+d'intents a \textbf{u} (nombre màxim d'intents sense confirmació 
+permesos), d'aquesta manera acabarà el bucle i la fase d'alive, tornant 
+a la fase de registre
+\item En qualsevol altre cas, que és la recepció d'un paquet no autoritzat
+o d'un paquet de tipus ALIVE\textunderscore NACK es considerarà com no haver 
+rebut resposta del servidor, i simplement s'incrementarà el contador d'intents
+\end{itemize}
+Utilitzant aquest sistema s'aconsegueix el manteniment de connexió  corresponent 
+amb el servidor per part del client.
+ 
 
 \subsection{Manteniment de comunicació del servidor}
+
+En la part del servidor, cada client que ha superat la fase de registre, té un camp
+anomenat TTL que fa referència al temps (en temps d'alives) que li queda fins ser 
+desconnectat. Quan aquest camp arriba a 0, es considera que s'ha perdut connexió amb
+el client i passa a l'estat DISCONNECTED.\\
+
+Per a que a cada temps d'alive es puguin actualitzar els TTL dels clients i a l'hora
+atendre totes les demés peticions del servidor, s'utilitzen threads concurrents. El
+programa principal és el que atendrà les peticions TCP i UDP. Cada vegada que es rebi
+un ALIVE\textunderscore INF correcte es crearà un thread que sumarà \textbf{k} (3) al
+camp TTL del client que ha enviat la petició. Acte seguit a cada temps d'alive li anirà
+restant 1, si s'arriba a 0 vol dir que no s'ha rebut cap ALIVE\textunderscore INF en el
+transcors d'aquests 3 temps d'alive. Això és degut a que si s'hagués rebut un altra 
+petició d'alive del mateix client, s'hauria creat un altre thread, que li hauria 
+sumat k (3) TTLs més.\\
+
+Aquest sistema és possible gràcies a que les variables 
+globals estan compartides entre
+threads d'un mateix procés; i la informació dels clients (on s'actualitzen els
+TTLS) estan en una llista de diccionaris de forma global. Una vegada entés 
+el sistema de TTL, es pot explicar de forma més ordenada el procés sencer 
+de manteniment de comunicació.\\
+
+Una vegada el servidor ha rebut la petició de registre correcta i l'ha respost 
+de forma adequada, el servidor ha de rebre un alive en menys de 2 temps d'alive. 
+És per això que el servidor només acabar la fase de registre del client crea 
+un thread dels comentats anteriorment, però en ves de sumar 3 TTLs, li suma 2.\\
+
+Mentres el thread secundari va restant els temps d'alive, el thread principal va
+atenent les peticions que li arriben pels canals UDP i TCP. Atén els 
+ALIVE\textunderscore INF de la següent forma:
+
+\begin{itemize}
+
+\item Quan rep un ALIVE\textunderscore INF d'un client, mira si aquest 
+està autoritzat, en l'estat correcte, i si el número aleatori i IP 
+concorden amb el client registrat. Si tot és correcte se li enviarà 
+un ALIVE\textunderscore ACK i es crearà un thread de descompte de TTL 
+de 3 temps d'alive. Si l'estat del client era REGISTERED, aquest
+passarà a ALIVE.\\
+
+\item Si la petició prové d'un client no autoritzat o que no està en els 
+estats REGISTERED o ALIVE, se li enviarà un ALIVE\textunderscore REJ 
+informant-lo del motiu.
+
+\item Si la IP o el número aleatori del client no concorden se li enviarà
+un ALIVE\textunderscore NACK informant-lo del motiu.
+\end{itemize}
+Amb aquest sistema de TTLs s'aconsegueix mantenir la comunicació corresponent
+amb els clients necessaris de forma concurrent per part del servidor.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 \section{Diagrama d'estats UDP}
 \section{Consideracions}
 
