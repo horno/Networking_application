@@ -5,6 +5,7 @@
 \usetikzlibrary{shapes.geometric,arrows,shadows, automata}
 \usepackage{float}
 \usepackage{listings}
+\usepackage{caption}
 
 %Tot això hauria d'anar en un pkg, però no sé com és fa
 \newcommand*{\assignatura}[1]{\gdef\1assignatura{#1}}
@@ -65,10 +66,19 @@ minimum height=1cm, text centered, draw=black, fill=red!30]
 \tableofcontents
 \newpage
 \pagenumbering{arabic}
-
+\section{Introducció}
+Documentació de la pràctica 1 de xarxes. L'objectiu d'aquest projecte és
+el de programar una aplicació de xarxes utilitzant el model client-servidor
+seguint les pautes d'un protocol de comunicacions. El document està partit
+en 5 parts, sent el primer la introducció, seguit d'un diagrama de 
+l'estructura del client i el servidor, l'explicació del manteniment 
+de la comunicació, el diagrama d'estats UDP i, per últim, consideracions 
+a tenir en compte.
+\newpage
 \section{Diagrames d'estructura}
 \subsection{Estructura del client}
-\begin{tikzpicture}[node distance=2cm]
+\begin{figure}[h]
+\begin{tikzpicture}[node distance=1.5cm]
 \node (1)[blue]{Inicialització estructures};
 \node (2)[blue, below of=1]{Obtenció paràmetres entrada};
 \node (3)[blue, below of=2]{Obtenció dades configuració};
@@ -90,8 +100,12 @@ minimum height=1cm, text centered, draw=black, fill=red!30]
 \draw [arrow](7) -- (9);
 \draw [arrow](9) -- (10);
 \end{tikzpicture}
+\caption{Diagrama de blocs de l'estructura del client}
+\end{figure}
+\newpage
 \subsection{Estructura del servidor}
-\begin{tikzpicture}[node distance=2cm]
+\begin{figure}[h]
+\begin{tikzpicture}[node distance=1.6cm]
 \node (1)[blue, xshift=2cm]{Obtenció arguments entrada i dades de configuració};
 \node (2)[blue, below of=1]{Crear socket UDP i TCP};
 \node (3)[blue, below of=2]{Bind socket UDP i TCP};
@@ -119,6 +133,8 @@ minimum height=1cm, text centered, draw=black, fill=red!30]
 \draw [arrow](7) -- (5);
 \draw [arrow](6) -- (5);
 \end{tikzpicture}
+\caption{Diagrama de blocs de l'estructura del servidor}
+\end{figure}
 \newpage
 
 \section{Manteniment de comunicació}
@@ -127,7 +143,7 @@ minimum height=1cm, text centered, draw=black, fill=red!30]
 Una vegada el client s'ha registrat, passa a la fase de manteniment
 de comunicació amb el servidor. Per entendre l'estratègia emprada
 primer s'han d'introduir unes variables importants. La primera
-és \textbf{intent}, és el contador d'intents d'alive. Variable de tipus 
+és \textbf{intent}, és el comptador d'intents d'alive. Variable de tipus 
 enter que s'inicialitzarà a
 0 i anirà canviant de valor en funció dels paquets que li arribin (o li
 deixin d'arribar). \textbf{Intent} ajudarà a sortir en el moment adient
@@ -139,7 +155,7 @@ La segona variable a mencionar és \textbf{first}, variable de tipus enter
 però que funciona com una booleana. Aquesta variable serveix per saber si
 ja s'ha rebut el primer ALIVE\textunderscore REQ. S'inicialitza a 1 i 
 en recepció de la primera confirmació d'alive passa a 0, nombre en 
-el que es quedarà durant tota la resta de procés de manteniment 
+el qual es quedarà durant tota la resta de procés de manteniment 
 de comunicació.\\
 
 El procés de manteniment de comunicació consta d'un bucle principal, 
@@ -152,43 +168,43 @@ bucle. Si després de l'espera s'ha rebut resposta, aquesta es tractarà
 de la següent manera:
 \begin{itemize}
 \item Si la resposta és un ALIVE\textunderscore ACK 
-del servidor corresponent, es ficarà el contador d'intents a 0 de 
+del servidor corresponent, es ficarà el comptador d'intents a 0 de 
 nou, d'aquesta manera es podran tornar a permetre \textbf{r} 
-ALIVE\textunderscore INF sense resposta. Si \textbf{first} té el
-valor 1 voldrà dir que és la primera confirmació d'alive i, per tant
+ALIVE\textunderscore INF sense resposta. Si \textbf{first} val 1 voldrà 
+dir que és la primera confirmació d'alive i, per tant
 , el client canviarà d'estat registrat a alive. En aquest moment és
 també quan es crea el procés de consola. 
 \item La recepció d'un ALIVE\textunderscore REJ del servidor corresponent
-es considerarà com suplantació d'identitat i es ficarà el contador 
+es considerarà com suplantació d'identitat i es ficarà el comptador 
 d'intents a \textbf{u} (nombre màxim d'intents sense confirmació 
 permesos), d'aquesta manera acabarà el bucle i la fase d'alive, tornant 
 a la fase de registre
 \item En qualsevol altre cas, que és la recepció d'un paquet no autoritzat
 o d'un paquet de tipus ALIVE\textunderscore NACK es considerarà com no haver 
-rebut resposta del servidor, i simplement s'incrementarà el contador d'intents
+rebut resposta del servidor, i simplement s'incrementarà el comptador d'intents
 \end{itemize}
 Utilitzant aquest sistema s'aconsegueix el manteniment de connexió  corresponent 
 amb el servidor per part del client.
- 
+\newpage 
 
 \subsection{Manteniment de comunicació del servidor}
 
 En la part del servidor, cada client que ha superat la fase de registre, té un camp
-anomenat TTL que fa referència al temps (en temps d'alives) que li queda fins ser 
+anomenat TTL que fa referència al temps (en temps d'alives) que li queda fins a ser 
 desconnectat. Quan aquest camp arriba a 0, es considera que s'ha perdut connexió amb
 el client i passa a l'estat DISCONNECTED.\\
 
-Per a que a cada temps d'alive es puguin actualitzar els TTL dels clients i a l'hora
-atendre totes les demés peticions del servidor, s'utilitzen threads concurrents. El
+Perquè a cada temps d'alive es puguin actualitzar els TTL dels clients i a l'hora
+atendre totes les altres peticions del servidor, s'utilitzen threads concurrents. El
 programa principal és el que atendrà les peticions TCP i UDP. Cada vegada que es rebi
 un ALIVE\textunderscore INF correcte es crearà un thread que sumarà \textbf{k} (3) al
 camp TTL del client que ha enviat la petició. Acte seguit a cada temps d'alive li anirà
 restant 1, si s'arriba a 0 vol dir que no s'ha rebut cap ALIVE\textunderscore INF en el
-transcors d'aquests 3 temps d'alive. Això és degut a que si s'hagués rebut un altra 
+transcurs d'aquests 3 temps d'alive. Això és degut al fet que si s'hagués rebut una altra 
 petició d'alive del mateix client, s'hauria creat un altre thread, que li hauria 
 sumat k (3) TTLs més.\\
 
-Aquest sistema és possible gràcies a que les variables 
+Aquest sistema és possible gràcies al fet que les variables 
 globals estan compartides entre
 threads d'un mateix procés; i la informació dels clients (on s'actualitzen els
 TTLS) estan en una llista de diccionaris de forma global. Una vegada entés 
@@ -198,16 +214,15 @@ de manteniment de comunicació.\\
 Una vegada el servidor ha rebut la petició de registre correcta i l'ha respost 
 de forma adequada, el servidor ha de rebre un alive en menys de 2 temps d'alive. 
 És per això que el servidor només acabar la fase de registre del client crea 
-un thread dels comentats anteriorment, però en ves de sumar 3 TTLs, li suma 2.\\
-
-Mentres el thread secundari va restant els temps d'alive, el thread principal va
+un thread dels comentats anteriorment, però en comptes de sumar 3 TTLs, li suma 2.\\
+Mentre el thread secundari va restant els temps d'alive, el thread principal va
 atenent les peticions que li arriben pels canals UDP i TCP. Atén els 
 ALIVE\textunderscore INF de la següent forma:
 
 \begin{itemize}
 
 \item Quan rep un ALIVE\textunderscore INF d'un client, mira si aquest 
-està autoritzat, en l'estat correcte, i si el número aleatori i IP 
+està autoritzat, en l'estat correcte, i si el nombre aleatori i IP 
 concorden amb el client registrat. Si tot és correcte se li enviarà 
 un ALIVE\textunderscore ACK i es crearà un thread de descompte de TTL 
 de 3 temps d'alive. Si l'estat del client era REGISTERED, aquest
@@ -217,14 +232,16 @@ passarà a ALIVE.\\
 estats REGISTERED o ALIVE, se li enviarà un ALIVE\textunderscore REJ 
 informant-lo del motiu.
 
-\item Si la IP o el número aleatori del client no concorden se li enviarà
+\item Si la IP o el nombre aleatori del client no concorden se li enviarà
 un ALIVE\textunderscore NACK informant-lo del motiu.
 \end{itemize}
 Amb aquest sistema de TTLs s'aconsegueix mantenir la comunicació corresponent
 amb els clients necessaris de forma concurrent per part del servidor.
 
 \section{Diagrama d'estats UDP}
+\begin{figure}[h]
 \begin{tikzpicture}
+
 \tikzstyle{v} = [circle,minimum height = 36mm, draw=black]
 \tikzstyle{e} = [->, very thick]
 
@@ -241,18 +258,53 @@ amb els clients necessaris de forma concurrent per part del servidor.
 \draw[e](W) to [bend left,looseness=1] node[above, xshift=1.7cm, yshift=-0.5cm] {REGISTER\_ACK} (R);
 \draw[e](R) to  node[above, xshift=-2.16cm,yshift=-1cm] {\parbox{1.5cm}{\centering ALIVE\_REJ/ \\ comunicació\,fallida} } (D);
 
-\end{tikzpicture}
-
+\end{tikzpicture}\\
+\caption{Diagrama de la màquina d'estats del protocol implementat}
+\end{figure}
 
 
 \newpage
 \section{Consideracions}
+\subsection{Buffer consola}
+La consola del client s'activa una vegada s'ha arribat a la fase d'alive. 
+Si s'escriu alguna comanda quan això encara no ha passat, quan la consola
+s'activi llegirà de l'entrada estàndard tot el que s'havia escrit quan aquesta
+no estava activada. He pensat que deixar-ho així, o buidar el buffer de l'entrada
+estàndard primer és una qüestió subjectiva més que un error ja que, per exemple,
+si el client fa un quit per marxar, i la consola encara no està activada, el 
+primer que farà quan s'activi és fer el quit. És per això que he decidit 
+deixar-ho així.
+\subsection{Llargada cua de clients}
+A l'enunciat de la pràctica s'especifica que en les proves hi hauria 2 clients
+de forma concurrent, així que s'ha triat de forma arbitrària que la cua 
+de clients que el servidor és capaç d'escoltar és de 3 clients.
+\subsection{SO\_REUSEADDR}
+Fent una sèrie de tests al client, me'n vaig adonar que si s'utilitzava 
+get-conf, es tancava el client i es tornava a executar amb inmediatesa 
+saltava el següent error durant un petit termini de temps:
+\begin{lstlisting}
+[Errno 98] Address already in use
+\end{lstlisting}
 
+Pensant-me que era un error al meu codi a causa de un mal
+tancament dels sockets, vaig cercar l'origen. Resulta ser que encara que
+el socket es tanqui de forma correcta, el sistema operatiu té un temps
+TIME\_WAIT abans que la stack de TCP consideri que la connexió ha estat
+tancada completament. Aquest fet es pot evitar fàcilment amb l'opció
+REUSEADDR:
+\begin{lstlisting}
+tcp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+\end{lstlisting}
 
+No obstant això, en ser una decisió del sistema operatiu, he considerat no
+ficar-ho, i deixar que el meu programa sigui afectat per aquest temps
+d'espera.
 
-
-
-
+\subsection{Get-conf servidor de prova}
+Una petita observació és que el servidor de proves penjat al campus virtual
+envia dues vegades l'última línia de configuració quan se li demana amb
+get-conf. Simplement a tenir en compte si s'utilitza per fer algun tipus
+de test.
 
 
 

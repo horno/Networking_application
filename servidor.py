@@ -10,8 +10,7 @@ import sys
 import os
 import signal
 import select
-from ctypes import *
-
+from ctypes import Structure, c_ubyte, c_char
 global equips_dat
 quit = False
 j = 2
@@ -20,7 +19,7 @@ r = 3
 l = 3 #queue length
 w = 4
 
-# Classe que serveix com a estructura per guardar les dades de la PDU 
+# Classe que serveix com a estructura per guardar les dades de la PDU
 # que s'enviarà i rebrà pel canal UDP
 class udp_PDU(Structure):
     _fields_ = [
@@ -45,9 +44,9 @@ class tcp_PDU(Structure):
 # Obtenció de paràmetres d'entrada mitjançant la llibreria argparse
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Server side of a client-server communication')
-    parser.add_argument('-c', help = 'New route to the configuration file')
-    parser.add_argument('-d', help = 'Activates the debugger flag', action = "store_true")
-    parser.add_argument('-u', help = 'New route to the authorized clients file')
+    parser.add_argument('-c', help='New route to the configuration file')
+    parser.add_argument('-d', help='Activates the debugger flag', action="store_true")
+    parser.add_argument('-u', help='New route to the authorized clients file')
     args = parser.parse_args()
     return args
 
@@ -109,7 +108,7 @@ def debugger(debug_text):
     if args.d:
         print("Debugger -> "+debug_text)
 
-# Primer pas d'autenticació de client. Mira si el nom existeix en la 
+# Primer pas d'autenticació de client. Mira si el nom existeix en la
 # llista de clients autoritzats
 def authorised(p):
     for i in equips_dat:
@@ -120,16 +119,16 @@ def authorised(p):
 # Envia una PDU de tipus denegació de registre a l'adreça passada per paràmetre
 # i amb el missatge passat per paràmetre com a dades del paquet
 def nack_pdu_send(addr, udp_sock, message):
-    nack_pdu = udp_PDU(tipus=0x02, nom='', MAC='', aleatori='', dades= message)
+    nack_pdu = udp_PDU(tipus=0x02, nom='', MAC='', aleatori='', dades=message)
     udp_sock.sendto(nack_pdu, addr)
 
-# Mètode cridat quan les dades d'un paquet de petició de registre són 
-# correctes. Genera un nombre aleatori de 000001 a 999999 i envia la 
+# Mètode cridat quan les dades d'un paquet de petició de registre són
+# correctes. Genera un nombre aleatori de 000001 a 999999 i envia la
 # PDU d'acceptació de registre amb el port TCP a les dades
 def correct_data(addr, udp_sock, p, equip_dat):
-    rand = random.randint(1000001,1999999)
+    rand = random.randint(1000001, 1999999)
     rand = str(rand)[1:]
-    ack_pdu = udp_PDU(tipus=0x01, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], 
+    ack_pdu = udp_PDU(tipus=0x01, nom=server_cfg['Nom'], MAC=server_cfg['MAC'],
                       aleatori=rand, dades=server_cfg['TCP-port'])
     udp_sock.sendto(ack_pdu, addr)
     actualize_equips(p.nom, 'aleatori', rand)
@@ -147,22 +146,23 @@ def check_state(addr, udp_sock, p, equip_dat):
                     print(p.nom + ' passa a estat REGISTERED')
                     actualize_equips(p.nom, 'TTL', 0)
                     debugger("Creat thread per gestionar alive")
-                    thr = threading.Thread(target = ttl_register, args=(equip_dat['nom'],))
+                    thr = threading.Thread(target=ttl_register, args=(equip_dat['nom'],))
                     thr.setDaemon(True)
                     thr.start()
                 else:
                     message = 'Ip del primer missatge no concorda'
-                    debugger('Petició de registre de ' + equip_dat['nom'] + ' denegada per:' + message)
+                    debugger('Petició de registre de ' + equip_dat['nom'] + ' denegada per:' +
+                             message)
                     nack_pdu_send(addr, udp_sock, message)
             else:
                 equip_dat['ip'] = addr[0]
                 actualize_equips(p.nom, 'ip', addr[0])
-                actualize_equips(p.nom, 'estat', 'REGISTERED')  
+                actualize_equips(p.nom, 'estat', 'REGISTERED')
                 print(p.nom + ' passa a estat REGISTERED')
-                correct_data(addr, udp_sock, p ,equip_dat)
+                correct_data(addr, udp_sock, p, equip_dat)
                 actualize_equips(p.nom, 'TTL', 0)
                 debugger("Creat thread per gestionar alive")
-                thr = threading.Thread(target = ttl_register, args=(equip_dat['nom'],))
+                thr = threading.Thread(target=ttl_register, args=(equip_dat['nom'],))
                 thr.setDaemon(True)
                 thr.start()
         else:
@@ -171,12 +171,13 @@ def check_state(addr, udp_sock, p, equip_dat):
             nack_pdu_send(addr, udp_sock, message)
     else:
         if p.MAC == equip_dat['MAC']  and addr[0] == equip_dat['ip']:
-            ack_pdu = udp_PDU(tipus=0x01, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=equip_dat['aleatori'], dades='9000')
+            ack_pdu = udp_PDU(tipus=0x01, nom=server_cfg['Nom'], MAC=server_cfg['MAC'],
+                              aleatori=equip_dat['aleatori'], dades='9000')
             udp_sock.sendto(ack_pdu, addr)
             debugger(p.nom + ' segueeix en estat ' + equip_dat['estat'])
         else:
             message = 'IP, aleatori o MAC no concorden'
-            debugger('Petició de registre de ' + p.nom + ' denegada per:' + message)            
+            debugger('Petició de registre de ' + p.nom + ' denegada per:' + message)
             nack_pdu_send(addr, udp_sock, message)
     return equip_dat
 
@@ -185,7 +186,7 @@ def check_state(addr, udp_sock, p, equip_dat):
 def actualize_equips(name, key, value):
     for i in equips_dat:
         if i['nom'] == name:
-            i[key] = value            
+            i[key] = value
 
 # Donat el nom d'un equip i un camp, retorna el valor emmagatzemat en la
 # llista de clients
@@ -204,7 +205,7 @@ def register_petition(addr, udp_sock, p):
         rej_pdu = udp_PDU(tipus=0x03, nom='', MAC='', aleatori='', dades='Equip no autoritzat')
         udp_sock.sendto(rej_pdu, addr)
 
-# Crida a les funcions de gestió de Registre o Alive en funció de la petició  
+# Crida a les funcions de gestió de Registre o Alive en funció de la petició
 def attend(data, addr, udp_sock):
     p = udp_PDU.from_buffer_copy(data)
     if p.tipus == 0x00:
@@ -215,12 +216,12 @@ def attend(data, addr, udp_sock):
         alive_inf(addr, udp_sock, p)
 
 # Mètode executat per un fil concurrent que controla el temps de vida
-# d'un client des de que es registra fins que envia el primer alive. 
+# d'un client des de que es registra fins que envia el primer alive.
 # Funciona de la mateixa manera que ttl_alive però només pel pas de
 # registered a alive
 def ttl_register(name):
     debugger('Comença temporitzacio de REGISTER a ALIVE de '+name)
-    actualize_equips(name, 'TTL', 2)    
+    actualize_equips(name, 'TTL', 2)
     for i in range(j):
         time.sleep(r)
     ttl = checkout_equip(name, 'TTL') - j
@@ -246,18 +247,19 @@ def ttl_alive(name):
         actualize_equips(name, 'estat', 'DISCONNECTED')
 
 # Mètode principal del control d'Alive dels clients. Gestiona l'autenticitat
-# dels paquets rebuts i respón en conseqüència 
+# dels paquets rebuts i respón en conseqüència
 def alive_inf(addr, udp_sock, p):
-    auth,equip_dat = authorised(p)
+    auth, equip_dat = authorised(p)
     if (auth and (equip_dat['estat'] == 'ALIVE' or  equip_dat['estat'] == 'REGISTERED')
-    and equip_dat['MAC'] == p.MAC and addr[0] == equip_dat['ip'] and 
-    p.aleatori == equip_dat['aleatori'] ):
-        alive_ack_pdu = udp_PDU(tipus=0x011, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=equip_dat['aleatori'], dades='')
+            and equip_dat['MAC'] == p.MAC and addr[0] == equip_dat['ip'] and
+            p.aleatori == equip_dat['aleatori']):
+        alive_ack_pdu = udp_PDU(tipus=0x011, nom=server_cfg['Nom'], MAC=server_cfg['MAC'],
+        aleatori=equip_dat['aleatori'], dades='')
         udp_sock.sendto(alive_ack_pdu, addr)
         if equip_dat['estat'] == 'REGISTERED':
             actualize_equips(p.nom, 'estat', 'ALIVE')
             print(p.nom + ' passa a estat ALIVE')
-        thr = threading.Thread(target = ttl_alive, args=(equip_dat['nom'],))
+        thr = threading.Thread(target=ttl_alive, args=(equip_dat['nom'],))
         thr.setDaemon(True)
         thr.start()
     elif  not auth  or (equip_dat['estat'] != 'ALIVE' and  equip_dat['estat'] != 'REGISTERED'):
@@ -276,18 +278,18 @@ def alive_inf(addr, udp_sock, p):
         err_pdu = udp_PDU(tipus=0x09, nom='', MAC='', aleatori='', dades=message)
         udp_sock.sendto(err_pdu, addr)
 
-# Mètode que gestiona la consola. Fins que quit no sigui cert, llegirà de 
+# Mètode que gestiona la consola. Fins que quit no sigui cert, llegirà de
 # l'entrada estàndard les comandes 'quit' i 'list'. Si llegeix una comanda
-# no reconeguda, ho informarà. 
+# no reconeguda, ho informarà.
 def console():
     quit = False
     debugger('Terminal activa')
     while not quit:
         try:
-            readable, [], [] = select.select([sys.stdin],[],[],0.0)
+            readable, [], [] = select.select([sys.stdin], [], [], 0.0)
         except ValueError:
             exit(-1)
-        if readable != []:    
+        if readable != []:
             try:
                 line = sys.stdin.readline()
             except ValueError:
@@ -298,15 +300,15 @@ def console():
                 debugger("El servidor es tancarà en uns instants")
                 quit = True
             elif word != [] and word[0] == 'list':
-                cp=('-NOM-','-MAC-','-ESTAT-','-IP-','-ALEATORI-')
-                print ('{0:>0} {1:>10} {2:>16} {3:>11} {4:>13}'.format(*cp))
+                cp = ('-NOM-', '-MAC-', '-ESTAT-', '-IP-', '-ALEATORI-')
+                print('{0:>0} {1:>10} {2:>16} {3:>11} {4:>13}'.format(*cp))
                 for i in equips_dat:
                     if i['estat'] == 'REGISTERED' or i['estat'] == 'ALIVE':
-                        cp = (i['nom'],i['MAC'],i['estat'],i['ip'],i['aleatori'])
+                        cp = (i['nom'], i['MAC'], i['estat'], i['ip'], i['aleatori'])
                         print ('{0:>0} {1:>14} {2:>14} {3:>11} {4:>8}'.format(*cp))
                     elif i['estat'] == 'DISCONNECTED':
-                        cp = (i['nom'],i['MAC'],i['estat'])
-                        print ('{0:>0} {1:>14} {2:>14}'.format(*cp))
+                        cp = (i['nom'], i['MAC'], i['estat'])
+                        print('{0:>0} {1:>14} {2:>14}'.format(*cp))
             else:
                 print('Comanda incorrecta')
     udp_sock.close()
@@ -325,9 +327,9 @@ def sigint_handler(signum, frame):
 # dades de configuració i respón en conseqüència
 def send_file(connect_sock, t, tcp_addr, sending, getting):
     debugger("Rebuda petició d'enviament d'arxiu de configuració")
-    if (authorised(t) and checkout_equip(t.nom,'estat') == 'ALIVE' and 
+    if (authorised(t) and checkout_equip(t.nom, 'estat') == 'ALIVE' and
     checkout_equip(t.nom,'MAC') == t.MAC and t.aleatori == checkout_equip(t.nom,'aleatori') and
-    tcp_addr[0] == checkout_equip(t.nom, 'ip') and not sending and not getting):
+             tcp_addr[0] == checkout_equip(t.nom, 'ip') and not sending and not getting):
         debugger("Tot correcte per SEND_CONF!")
         ack_tcp_pdu = tcp_PDU(tipus=0x21, nom=server_cfg['Nom'], MAC=server_cfg['MAC'], aleatori=t.aleatori, dades= t.nom+".cfg")
         connect_sock.send(ack_tcp_pdu)
@@ -491,7 +493,6 @@ if __name__ == '__main__':
     debugger("Socket UDP obert")
 
     tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #tcp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) #TODO: Treure-ho
     tcp_sock.bind(("", int(server_cfg['TCP-port'])))
     debugger("Socket TCP obert")
     a = tcp_sock.listen(l)
