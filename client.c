@@ -55,7 +55,11 @@ struct PDU_TCP_package{
 	char dades[150];
 };
 
+<<<<<<< HEAD
 /* Estructura que serveix per guardar estructures i elements de frequent ús 
+=======
+/* Estructura que serveix per guardar estructures de frequent ús 
+>>>>>>> 6036907bc1af0ddcd340e611ed92393efd48cf53
    per evitar capçaleres de funcions excessivament llargues */
 struct meta_struct{
 	int sock;
