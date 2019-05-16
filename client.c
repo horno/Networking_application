@@ -55,7 +55,7 @@ struct PDU_TCP_package{
 	char dades[150];
 };
 
-/* Estructura que serveix per guardar estructures intent elements de frequent ús 
+/* Estructura que serveix per guardar estructures i elements de frequent ús 
    per evitar capçaleres de funcions excessivament llargues */
 struct meta_struct{
 	int sock;
@@ -175,7 +175,7 @@ void close_commandline(int fdcli[2])
 
 /* Amb l'ajuda d'un select (per a que no sigui bloquejant), mira si s'ha rebut
    informació des del procés de la consola. Si la informació obtinguda és "quit",
-   procedeix a tancar el socket intent el procés */
+   procedeix a tancar el socket i el procés */
 void check_console_command(int sock, int fdcons[2])
 {
 	char buff[20];
@@ -197,8 +197,8 @@ void check_console_command(int sock, int fdcons[2])
 	}
 }
 
-/* Crea 2 pipes intent crea un fill mitjançant la crida fork(). fdcons és el descriptor
-   de fitxer que utilitzarà el procés fill per enviar dades al pare, intent fdcli és 
+/* Crea 2 pipes i crea un fill mitjançant la crida fork(). fdcons és el descriptor
+   de fitxer que utilitzarà el procés fill per enviar dades al pare, i fdcli és 
    el que utilitzarà el pare per enviar dades al fill*/
 void fork_console(int debug, struct console_needs *console_struct)
 {
@@ -286,7 +286,7 @@ void console(int debug, struct console_needs console_struct)
 }
 
 /* Mètode que envia el paquet d'obtenció de configuració, tracta la resposta del
-   servidor, intent afegeix les dades de configuració al fitxer pertinent */
+   servidor, i afegeix les dades de configuració al fitxer pertinent */
 void getconf(int debug, struct console_needs console_struct)
 {
 	struct PDU_TCP_package send_tcp_pack;
@@ -329,7 +329,7 @@ void getconf(int debug, struct console_needs console_struct)
 	close(sockfd);
 }
 
-/* Bucle que controla la cadència de dades rebudes pel socket TCP intent col·loca les
+/* Bucle que controla la cadència de dades rebudes pel socket TCP i col·loca les
    dades a l'arxiu de configuració correcte */
 void get_and_save_conf(int debug, int sockfd, FILE* fp)
 {
@@ -569,8 +569,8 @@ void pass_info(struct console_needs *console_struct, struct meta_struct metastru
 	
 	console_struct->s_addr = metastruct.addr_server.sin_addr.s_addr;
 }
-/* Donat el paquet UDP obtingut al registre, intent un paquet UDP obtingut en l'alive, retorna
-   1 si el paquet alive no correspón (no està autoritzat) al registrat, intent 0 altrament */
+/* Donat el paquet UDP obtingut al registre, i un paquet UDP obtingut en l'alive, retorna
+   1 si el paquet alive no correspón (no està autoritzat) al registrat, i 0 altrament */
 int authenticate_alive(int debug,struct PDU_UDP_package register_pack,
 					   struct PDU_UDP_package alive_pack)
 {
@@ -654,7 +654,7 @@ int register_process(fd_set fdset, struct timeval timeout, int debug,
 
 /* Espera la recepeció d'un paquet per UDP el temps establert (per timeout) amb select, 
    si no es rep res, torna a enviar una petició de registre, si rep un paquet
-   el tracta amb la funció UDP_answer_treatment, intent retorna un sencer per a que la funció
+   el tracta amb la funció UDP_answer_treatment, i retorna un sencer per a que la funció
    que l'ha cridat sapigui quina acció fer */
 int select_process(int debug, fd_set fdset, struct timeval timeout,
                      struct meta_struct *metastruct)
@@ -733,7 +733,7 @@ void debugger(int debug, char message[])
 	}
 }
 
-/* Llegeix el paquet pel canal UDP intent el retorna */
+/* Llegeix el paquet pel canal UDP i el retorna */
 struct PDU_UDP_package recvfrom_UDP(int sock)
 {
 	struct PDU_UDP_package recv_reg_UDP;
@@ -759,7 +759,7 @@ void send_UDP_pack(int debug, struct meta_struct *metastruct)
 	}
 }
 
-/* Omple l'estructura de l'adreça del servidor intent l'estructura del paquet UDP a enviar */
+/* Omple l'estructura de l'adreça del servidor i l'estructura del paquet UDP a enviar */
 void fill_structures(struct cfg_data dataconfig, struct hostent *ent, 
 							  struct meta_struct *metastruct)
 {
@@ -778,7 +778,7 @@ void fill_structures(struct cfg_data dataconfig, struct hostent *ent,
 }
 
 /* Agafa la informació de l'arxiu de configuració per ficar-la en la estructura pertinent
-   intent retornar aquesta */
+   i retornar aquesta */
 struct cfg_data collect_config_data(char cfg_file[])
 {
 	FILE *fpointer;
