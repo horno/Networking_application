@@ -55,7 +55,7 @@ struct PDU_TCP_package{
 	char dades[150];
 };
 
-/* Estructura que serveix per guardar estructures intent elements de frequent ús 
+/* Estructura que serveix per guardar estructures de frequent ús 
    per evitar capçaleres de funcions excessivament llargues */
 struct meta_struct{
 	int sock;
